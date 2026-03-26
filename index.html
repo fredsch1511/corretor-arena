@@ -1969,6 +1969,9 @@ async function loadPacotesCorretor(){
 
   const disponiveis=pacotes.filter(p=>p.status==='aberto');
   const entregues=pacotes.filter(p=>p.status==='enviado'||p.status==='concluido');
+  // Garante que não há sobreposição
+  const idsEntregues=new Set(entregues.map(p=>p.id));
+  const disponiveisFiltrados=disponiveis.filter(p=>!idsEntregues.has(p.id));
 
   // Determina aba ativa
   const abaAtiva = window._corretorAba || 'disponiveis';
@@ -1988,7 +1991,7 @@ async function loadPacotesCorretor(){
     </div>`;
   } else {
     htmlDisp='<div style="display:grid;gap:12px">';
-    for(const p of disponiveis) htmlDisp+=await renderCardPacote(p,false);
+    for(const p of disponiveisFiltrados) htmlDisp+=await renderCardPacote(p,false);
     htmlDisp+='</div>';
   }
 
@@ -2021,7 +2024,7 @@ async function loadPacotesCorretor(){
     <div style="display:flex;gap:8px;margin-bottom:16px">
       <button id="tab-disp-btn" onclick="trocarAbaCorretor('disponiveis')"
         style="flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:${bgD};color:${clD};border:${bdD}">
-        Disponíveis (${disponiveis.length})
+        Disponíveis (${disponiveisFiltrados.length})
       </button>
       <button id="tab-entr-btn" onclick="trocarAbaCorretor('entregues')"
         style="flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;background:${bgE};color:${clE};border:${bdE}">
