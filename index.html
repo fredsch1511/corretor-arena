@@ -707,7 +707,6 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
     <div class="topbar-spacer"></div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
       <span class="topbar-user" id="corretor-user-name"></span>
-      <span id="corretor-periodo-topbar" style="font-size:11px;color:var(--ink3)"></span>
       <span id="corretor-valor-topbar" style="font-size:13px;color:var(--accent);font-weight:700;font-family:"Inter",sans-serif"></span>
     </div>
     <button class="btn-ghost" onclick="toggleTheme()" id="theme-btn-corr" title="Alternar tema" style="font-size:16px;padding:7px 10px">☀️</button>
@@ -1095,28 +1094,52 @@ async function loadPacotesLista(){
     el.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Nenhum pacote criado ainda</div><div class="empty-sub">Clique em "+ Novo Pacote" para começar</div></div>';
     return;
   }
-  const statusBadge=s=>s==='aberto'?'<span class="badge badge-orange">Em andamento</span>':s==='enviado'?'<span class="badge badge-blue">Enviado pelo corretor</span>':'<span class="badge badge-green">Físico recebido</span>';
-  let html='<table><thead><tr><th>Pacote</th><th>Corretor</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
-  for(const p of data){
-    const desc=p.tipo==='atrasadas'?'Atrasadas':`${p.serie||''} ${p.turma||''}`;
-    const prop=p.tipo==='normal'&&p.proposta?` · ${p.proposta} ${p.versao}ªv`:'';
-    html+=`<tr>
-      <td><strong style="font-family:"Inter",sans-serif">${p.nome}</strong><br><span style="font-size:12px;color:var(--ink3)">${desc}${prop}</span></td>
-      <td>${p.usuarios?.nome||'—'}</td>
-      <td>${statusBadge(p.status)}</td>
-      <td><div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${p.status==='enviado'?`
-          <button class="btn btn-sm btn-success" onclick="receberFisico('${p.id}')">📦 Físico recebido</button>
-          <button class="btn btn-sm btn-blue" onclick="reabrirPacote('${p.id}')">Reabrir</button>`:''}
-        ${p.status==='aberto'?`<button class="btn btn-sm btn-outline" onclick="reabrirPacote('${p.id}')">Reabrir</button>`:''}
-        <button class="btn btn-sm btn-outline" onclick="gerarPDF('${p.id}','${p.nome.replace(/'/g,"\'")}')" title="Relatório PDF">PDF</button>
-        <button class="btn btn-sm btn-danger" onclick="excluirPacote('${p.id}')">Excluir</button>
-      </div></td>
-    </tr>`;
-  }
-  el.innerHTML=html+'</tbody></table>';
-}
 
+  const andamento=data.filter(p=>p.status==='aberto');
+  const enviados=data.filter(p=>p.status==='enviado');
+  const historico=data.filter(p=>p.status==='concluido');
+
+  function renderTabela(lista){
+    if(!lista.length) return '<div style="padding:16px;text-align:center;font-size:13px;color:var(--ink3)">Nenhum pacote</div>';
+    let h='<table><thead><tr><th>Pacote</th><th>Corretor</th><th>Datas</th><th>Ações</th></tr></thead><tbody>';
+    for(const p of lista){
+      const ret=p.data_retirada?new Date(p.data_retirada+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'—';
+      const dev=p.data_devolucao?new Date(p.data_devolucao+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'—';
+      h+=`<tr>
+        <td><strong style="font-size:13px">${p.nome}</strong></td>
+        <td style="font-size:13px">${p.usuarios?.nome||'—'}</td>
+        <td style="font-size:12px;color:var(--ink2)">↓ ${ret} · ↑ ${dev}</td>
+        <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${p.status==='enviado'?`
+            <button class="btn btn-sm btn-success" onclick="receberFisico('${p.id}')">📦 Receber</button>
+            <button class="btn btn-sm btn-blue" onclick="reabrirPacote('${p.id}')">Reabrir</button>`:''}
+          ${p.status==='aberto'?`<button class="btn btn-sm btn-blue" onclick="reabrirPacote('${p.id}')">Reabrir</button>`:''}
+          <button class="btn btn-sm btn-outline" onclick="gerarRelatorioNotas('${p.id}','${p.nome.replace(/'/g,"\'")}')" title="PDF Notas">📋</button>
+          <button class="btn btn-sm btn-outline" onclick="gerarPDF('${p.id}','${p.nome.replace(/'/g,"\'")}')" title="PDF Pendências">⚠️</button>
+          <button class="btn btn-sm btn-danger" onclick="excluirPacote('${p.id}')">✕</button>
+        </div></td>
+      </tr>`;
+    }
+    return h+'</tbody></table>';
+  }
+
+  function secao(titulo, cor, icon, lista){
+    if(!lista.length && titulo==='Histórico') return '';
+    return `<div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid ${cor}22">
+        <span style="font-size:16px">${icon}</span>
+        <span style="font-family:'Inter',sans-serif;font-size:14px;font-weight:700;color:${cor}">${titulo}</span>
+        <span style="font-size:11px;font-weight:700;background:${cor}18;color:${cor};padding:2px 8px;border-radius:10px">${lista.length}</span>
+      </div>
+      <div class="table-wrap">${renderTabela(lista)}</div>
+    </div>`;
+  }
+
+  el.innerHTML=
+    secao('Em andamento','var(--accent)','✏️',andamento)+
+    secao('Confirmar recebimento físico','var(--blue)','📦',enviados)+
+    secao('Histórico','var(--green)','✅',historico);
+}
 async function encerrarPacote(id){if(!confirm('Encerrar este pacote?'))return;await db.from('pacotes').update({status:'concluido'}).eq('id',id);toast('Pacote encerrado! ✓','success');loadDashboard();}
 async function reabrirPacote(id){if(!confirm('Reabrir para o corretor editar?'))return;await db.from('pacotes').update({status:'aberto'}).eq('id',id);toast('Pacote reaberto! ✓','success');loadDashboard();}
 async function receberFisico(id){if(!confirm('Confirmar recebimento do pacote físico? O pacote será encerrado.'))return;await db.from('pacotes').update({status:'concluido'}).eq('id',id);toast('Pacote físico recebido! ✓','success');loadDashboard();}
@@ -1690,7 +1713,6 @@ async function loadPacotesCorretor(){
 
   let html=`
   <div class="page-title">Olá, ${currentUser.nome}!</div>
-  <p class="page-sub" style="margin-bottom:20px">${labelPeriodo}</p>
 
   <!-- ABAS -->
   <div class="tabs" style="margin-bottom:24px">
