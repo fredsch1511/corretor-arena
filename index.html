@@ -1282,13 +1282,13 @@ async function criarPacote(){
   if(!corretorId){showErr(errEl,'Selecione um corretor.');return;}
 
   let inserts=[],nomePacote='',serie='',turma='',proposta=null,versao=null;
+  const dataRet=document.getElementById('pk-data-retirada')?.value||null;
+  const dataDev=document.getElementById('pk-data-devolucao')?.value||null;
 
   if(tipo==='extra'){
     const desc=document.getElementById('pk-extra-desc').value.trim();
     const qtd=parseInt(document.getElementById('pk-extra-qtd').value)||0;
     const valorUnit=parseFloat(document.getElementById('pk-extra-valor-unit').value)||6;
-    const dataRet=document.getElementById('pk-data-retirada').value;
-    const dataDev=document.getElementById('pk-data-devolucao').value;
     if(!desc){showErr(errEl,'Descreva o pacote extra.');return;}
     if(!qtd){showErr(errEl,'Informe a quantidade.');return;}
     const {data:pac,error}=await db.from('pacotes').insert({
