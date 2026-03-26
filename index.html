@@ -1967,11 +1967,9 @@ async function loadPacotesCorretor(){
   const topbarVal=document.getElementById('corretor-valor-topbar');
   if(topbarVal)topbarVal.textContent='R$ '+valorPeriodo.toFixed(2).replace('.',',');
 
-  const disponiveis=pacotes.filter(p=>p.status==='aberto');
-  const entregues=pacotes.filter(p=>p.status==='enviado'||p.status==='concluido');
-  // Garante que não há sobreposição
-  const idsEntregues=new Set(entregues.map(p=>p.id));
-  const disponiveisFiltrados=disponiveis.filter(p=>!idsEntregues.has(p.id));
+  // Filtro rigoroso: só aberto vai para disponíveis
+  const disponiveisFiltrados=pacotes.filter(p=>p.status==='aberto');
+  const entregues=pacotes.filter(p=>p.status!=='aberto');
 
   // Determina aba ativa
   const abaAtiva = window._corretorAba || 'disponiveis';
@@ -2031,8 +2029,15 @@ async function loadPacotesCorretor(){
         Entregues (${entregues.length})
       </button>
     </div>
-    <div id="tab-disponiveis" style="display:${abaAtiva==='disponiveis'?'block':'none'}">${htmlDisp}</div>
-    <div id="tab-entregues" style="display:${abaAtiva==='entregues'?'block':'none'}">${htmlEntr}</div>`;
+    <div id="tab-disponiveis" style="display:block">${htmlDisp}</div>
+    <div id="tab-entregues" style="display:none">${htmlEntr}</div>`;
+  // Aplica aba ativa após render
+  if(window._corretorAba==='entregues'){
+    const d=document.getElementById('tab-disponiveis');
+    const e=document.getElementById('tab-entregues');
+    if(d)d.style.display='none';
+    if(e)e.style.display='block';
+  }
 }
 
 function trocarAbaCorretor(tab){
