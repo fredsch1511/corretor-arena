@@ -1850,10 +1850,24 @@ async function loadPacotesCorretor(){
 }
 
 function switchCorretorTab(tab){
-  document.getElementById('tab-disponiveis').style.display=tab==='disponiveis'?'block':'none';
-  document.getElementById('tab-entregues').style.display=tab==='entregues'?'block':'none';
-  document.getElementById('tab-disp-btn').classList.toggle('active',tab==='disponiveis');
-  document.getElementById('tab-entr-btn').classList.toggle('active',tab==='entregues');
+  // Mostra/esconde conteúdo
+  const disp=document.getElementById('tab-disponiveis');
+  const entr=document.getElementById('tab-entregues');
+  if(disp) disp.style.display=tab==='disponiveis'?'block':'none';
+  if(entr) entr.style.display=tab==='entregues'?'block':'none';
+  // Atualiza visual dos botões (inline style)
+  const btnDisp=document.getElementById('tab-disp-btn');
+  const btnEntr=document.getElementById('tab-entr-btn');
+  if(btnDisp){
+    btnDisp.style.background=tab==='disponiveis'?'var(--accent)':'var(--surface)';
+    btnDisp.style.color=tab==='disponiveis'?'#fff':'var(--ink2)';
+    btnDisp.style.border=tab==='disponiveis'?'none':'1px solid var(--border)';
+  }
+  if(btnEntr){
+    btnEntr.style.background=tab==='entregues'?'var(--accent)':'var(--surface)';
+    btnEntr.style.color=tab==='entregues'?'#fff':'var(--ink2)';
+    btnEntr.style.border=tab==='entregues'?'none':'1px solid var(--border)';
+  }
 }
 
 async function renderCardPacote(p, soLeitura){
