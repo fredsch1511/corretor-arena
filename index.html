@@ -1620,9 +1620,7 @@ async function loadPacotesCorretor(){
 
   // Atualiza topbar
   const topbarVal=document.getElementById('corretor-valor-topbar');
-  const topbarPer=document.getElementById('corretor-periodo-topbar');
-  if(topbarPer)topbarPer.textContent=labelPeriodo;
-  if(topbarVal)topbarVal.textContent='R$ '+valorPeriodo.toFixed(2).replace('.',',')+' · Total R$ '+valorTotal.toFixed(2).replace('.',',');
+  if(topbarVal)topbarVal.textContent=labelPeriodo+' · R$ '+valorPeriodo.toFixed(2).replace('.',',')+' | Total R$ '+valorTotal.toFixed(2).replace('.',',');
 
   const disponiveis=pacotes.filter(p=>p.status==='aberto');
   const entregues=pacotes.filter(p=>p.status==='enviado'||p.status==='concluido');
@@ -1674,8 +1672,12 @@ function switchCorretorTab(tab){
 }
 
 async function renderCardPacote(p, soLeitura){
-  const {data:notas}=await db.from('notas_redacao').select('id,nota,situacao,motivo_zero,proposta,versao,alunos(id,nome,numero,turma,serie)').eq('pacote_id',p.id).order('alunos(numero)');
-  const total=(notas||[]).length;
+  const {data:notas}=await db.from('notas_redacao')
+    .select('id,nota,situacao,motivo_zero,motivo_atraso,proposta,versao,nome_avulso,alunos(id,nome,numero,turma,serie)')
+    .eq('pacote_id',p.id);
+  const totalLinhas=(notas||[]).length;
+  // Para atrasadas, total esperado vem do campo quantidade_atrasadas
+  const total=p.tipo==='atrasadas'?(p.quantidade_atrasadas||totalLinhas):totalLinhas;
   const feitas=(notas||[]).filter(n=>(n.nota!==null)||n.situacao==='zerada').length;
   const earn=feitas*(p.valor_por_redacao||5);
   const enviado=p.status==='enviado'||p.status==='concluido';
