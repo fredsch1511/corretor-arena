@@ -730,8 +730,6 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
   <div style="background:var(--surface);border-bottom:1px solid var(--border)">
   <!-- LINHA PRINCIPAL -->
   <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px">
-
-    <!-- Esquerda: avatar + saudação -->
     <div style="display:flex;align-items:center;gap:12px">
       <div id="corr-avatar" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#F0997B,#D4541E);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">?</div>
       <div>
@@ -739,13 +737,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
         <div id="corretor-date" style="font-size:11px;color:var(--ink3);margin-top:1px"></div>
       </div>
     </div>
-
-    <!-- Direita: relógio + ações -->
-    <div style="display:flex;align-items:center;gap:10px">
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;text-align:center">
-        <div id="corretor-clock" style="font-size:16px;font-weight:800;color:var(--ink);letter-spacing:1px;line-height:1;font-variant-numeric:tabular-nums"></div>
-        <div id="corretor-sec" style="font-size:9px;color:var(--ink3);margin-top:2px;text-transform:uppercase;letter-spacing:.5px"></div>
-      </div>
+    <div style="display:flex;align-items:center;gap:8px">
       <button class="btn-ghost" onclick="toggleTheme()" id="theme-btn-corr" style="font-size:15px;padding:6px 8px">☀️</button>
       <button class="btn-ghost" onclick="doLogout()" style="font-size:12px;padding:6px 10px;color:var(--ink2)">Sair</button>
     </div>
@@ -2042,7 +2034,23 @@ async function loadPacotesCorretor(){
 
 function trocarAbaCorretor(tab){
   window._corretorAba = tab;
-  loadPacotesCorretor();
+  // Mostra/esconde imediatamente sem recarregar
+  const divDisp = document.getElementById('tab-disponiveis');
+  const divEntr = document.getElementById('tab-entregues');
+  const btnDisp = document.getElementById('tab-disp-btn');
+  const btnEntr = document.getElementById('tab-entr-btn');
+  if(divDisp) divDisp.style.display = tab==='disponiveis' ? 'block' : 'none';
+  if(divEntr) divEntr.style.display = tab==='entregues' ? 'block' : 'none';
+  if(btnDisp){
+    btnDisp.style.background = tab==='disponiveis' ? 'var(--accent)' : 'var(--surface)';
+    btnDisp.style.color = tab==='disponiveis' ? '#fff' : 'var(--ink2)';
+    btnDisp.style.border = tab==='disponiveis' ? 'none' : '1px solid var(--border)';
+  }
+  if(btnEntr){
+    btnEntr.style.background = tab==='entregues' ? 'var(--accent)' : 'var(--surface)';
+    btnEntr.style.color = tab==='entregues' ? '#fff' : 'var(--ink2)';
+    btnEntr.style.border = tab==='entregues' ? 'none' : '1px solid var(--border)';
+  }
 }
 
 function switchCorretorTab(tab){ trocarAbaCorretor(tab); }
@@ -3389,22 +3397,11 @@ async function gerarEtiquetasPDF(){
 
 // RELÓGIO DO CORRETOR
 function iniciarRelogio(){
-  function atualizar(){
-    const agora=new Date();
-    const h=String(agora.getHours()).padStart(2,'0');
-    const m=String(agora.getMinutes()).padStart(2,'0');
-    const s=String(agora.getSeconds()).padStart(2,'0');
-    const data=agora.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'})
-      .replace('.','').replace(',','');
-    const clockEl=document.getElementById('corretor-clock');
-    const secEl=document.getElementById('corretor-sec');
-    const dateEl=document.getElementById('corretor-date');
-    if(clockEl)clockEl.textContent=h+':'+m;
-    if(secEl)secEl.textContent=s+'s';
-    if(dateEl)dateEl.textContent=data;
-  }
-  atualizar();
-  setInterval(atualizar,1000);
+  const agora=new Date();
+  const data=agora.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'})
+    .replace('.','').replace(',','');
+  const dateEl=document.getElementById('corretor-date');
+  if(dateEl)dateEl.textContent=data;
 }
 
 function exportarNotasExcel(){
