@@ -1683,7 +1683,7 @@ async function loadPacotesCorretor(){
 
   // Atualiza topbar
   const topbarVal=document.getElementById('corretor-valor-topbar');
-  if(topbarVal)topbarVal.textContent=labelPeriodo+' · R$ '+valorPeriodo.toFixed(2).replace('.',',')+' | Total R$ '+valorTotal.toFixed(2).replace('.',',');
+  if(topbarVal)topbarVal.textContent='R$ '+valorPeriodo.toFixed(2).replace('.',',')+' · Total R$ '+valorTotal.toFixed(2).replace('.',',');
 
   const disponiveis=pacotes.filter(p=>p.status==='aberto');
   const entregues=pacotes.filter(p=>p.status==='enviado'||p.status==='concluido');
@@ -3014,6 +3014,22 @@ async function gerarEtiquetasPDF(){
   win.document.write(pdfHTML);
   win.document.close();
   setTimeout(()=>win.print(), 600);
+}
+
+// RELÓGIO DO CORRETOR
+function iniciarRelogio(){
+  function atualizar(){
+    const agora=new Date();
+    const hora=agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const data=agora.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'})
+      .replace('.','').replace(',','');
+    const clockEl=document.getElementById('corretor-clock');
+    const dateEl=document.getElementById('corretor-date');
+    if(clockEl)clockEl.textContent=hora;
+    if(dateEl)dateEl.textContent=data;
+  }
+  atualizar();
+  setInterval(atualizar,1000);
 }
 
 function closeModal(id){document.getElementById(id).classList.add('hidden');}
