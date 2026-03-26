@@ -1089,7 +1089,19 @@ function doLogout(){
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function showTab(id){
   const tabs=['tab-pacotes','tab-prep','tab-notas','tab-corretores','tab-alunos','tab-etiquetas','tab-config'];
-  tabs.forEach(t=>{const el=document.getElementById(t);if(el)el.style.display=t===id?'block':'none';});
+  tabs.forEach(t=>{
+    const el=document.getElementById(t);
+    if(!el)return;
+    if(t===id){
+      el.style.display='block';
+      el.style.opacity='0';
+      el.style.transition='opacity .15s ease';
+      requestAnimationFrame(()=>requestAnimationFrame(()=>el.style.opacity='1'));
+    } else {
+      el.style.display='none';
+      el.style.opacity='1';
+    }
+  });
   // Atualiza sidebar
   const navMap={'tab-pacotes':'nav-pacotes','tab-prep':'nav-prep','tab-notas':'nav-notas','tab-corretores':'nav-corretores','tab-etiquetas':'nav-etiquetas','tab-config':'nav-config'};
   document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('sb-active'));
@@ -1124,13 +1136,83 @@ async function loadPacotesLista(){
   const el=document.getElementById('lista-pacotes');
   const {data}=await db.from('pacotes').select('*,usuarios(nome)').order('created_at',{ascending:false});
   if(!data||!data.length){
-    el.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Nenhum pacote criado ainda</div><div class="empty-sub">Clique em "+ Novo Pacote" para começar</div></div>';
+    el.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 24px;text-align:center">
+      <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style="margin-bottom:20px;opacity:.3">
+        <rect x="8" y="28" width="64" height="44" rx="8" stroke="currentColor" stroke-width="3"/>
+        <path d="M8 44h64" stroke="currentColor" stroke-width="3"/>
+        <path d="M24 28V22a16 16 0 0132 0v6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        <path d="M32 56h16M40 48v16" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <div style="font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px">Nenhum pacote criado</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:24px;max-width:280px;line-height:1.5">Crie o primeiro pacote e atribua a um corretor para começar o fluxo</div>
+      <button onclick="openModalPacote()" class="btn btn-primary" style="padding:10px 24px;border-radius:10px;font-size:14px">+ Novo Pacote</button>
+    </div>`;
     return;
   }
 
   const andamento=data.filter(p=>p.status==='aberto');
   const enviados=data.filter(p=>p.status==='enviado');
   const historico=data.filter(p=>p.status==='concluido');
+
+  // Saudação
+  const agora=new Date();
+  const hora=agora.getHours();
+  const saudacao=hora<12?'Bom dia':hora<18?'Boa tarde':'Boa noite';
+  const nomeCoord=currentUser?.nome?.split(' ')[0]||'';
+  const dataFormatada=agora.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  const dataLabel=dataFormatada.charAt(0).toUpperCase()+dataFormatada.slice(1);
+
+  // Conta alunos abaixo de 5 (aproximado — busca notas_historicas)
+  const {count:abaixo5}=await db.from('notas_historicas').select('*',{count:'exact',head:true}).lt('nota',5);
+
+  // Atividade recente — últimos pacotes modificados
+  const {data:recentes}=await db.from('pacotes')
+    .select('nome,status,updated_at,usuarios(nome)')
+    .order('updated_at',{ascending:false}).limit(4);
+
+  const statusLabel={aberto:'abriu',enviado:'enviou',concluido:'concluiu'};
+  const atividadeHTML=(recentes||[]).map(p=>{
+    const quando=new Date(p.updated_at);
+    const diffH=Math.round((agora-quando)/3600000);
+    const diffLabel=diffH<1?'agora há pouco':diffH<24?diffH+'h atrás':diffH<48?'ontem':quando.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const cor=p.status==='enviado'?'var(--green)':p.status==='concluido'?'var(--blue)':'var(--accent)';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border)">
+      <div style="width:8px;height:8px;border-radius:50%;background:${cor};flex-shrink:0"></div>
+      <div style="flex:1;font-size:13px;color:var(--ink)">
+        <span style="font-weight:600">${p.usuarios?.nome||'—'}</span>
+        <span style="color:var(--ink3)"> ${statusLabel[p.status]||'atualizou'} </span>
+        <span style="font-weight:500">${p.nome}</span>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);flex-shrink:0">${diffLabel}</div>
+    </div>`;
+  }).join('');
+
+  const saudacaoHTML=`
+  <div style="margin-bottom:24px">
+    <div style="font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.5px;margin-bottom:3px">${saudacao}, ${nomeCoord}! 👋</div>
+    <div style="font-size:13px;color:var(--ink3);margin-bottom:20px">${dataLabel}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="setPacoteAba('andamento')">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);margin-bottom:8px"></div>
+        <div style="font-size:24px;font-weight:800;color:var(--accent);line-height:1">${andamento.length}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:4px">Em andamento</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="setPacoteAba('receber')">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--blue);margin-bottom:8px"></div>
+        <div style="font-size:24px;font-weight:800;color:var(--blue);line-height:1">${enviados.length}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:4px">Receber físico</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--red);margin-bottom:8px"></div>
+        <div style="font-size:24px;font-weight:800;color:var(--red);line-height:1">${abaixo5||0}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:4px">Abaixo de 5</div>
+      </div>
+    </div>
+    ${atividadeHTML?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;padding:10px 16px;border-bottom:1px solid var(--border)">Atividade recente</div>
+      ${atividadeHTML}
+    </div>`:''}
+  </div>`;
 
   // Calcula totais financeiros
   const calcValor=lista=>lista.reduce((s,p)=>{
@@ -1443,13 +1525,60 @@ async function filtrarTurmaAlunos(serie,turma){
 async function loadCorretores(){
   const {data}=await db.from('usuarios').select('*').eq('role','corretor').order('nome');
   const el=document.getElementById('lista-corretores');
-  if(!data||!data.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-title">Nenhum corretor cadastrado</div></div>';return;}
-  let html='<table><thead><tr><th>Nome</th><th>Usuário</th><th>Pacotes</th><th>Ações</th></tr></thead><tbody>';
-  for(const c of data){
-    const {count}=await db.from('pacotes').select('*',{count:'exact',head:true}).eq('corretor_id',c.id);
-    html+=`<tr><td><strong>${c.nome}</strong></td><td><code style="font-size:13px;background:var(--surface2);padding:2px 8px;border-radius:4px">${c.username}</code></td><td>${count||0}</td><td><button class="btn btn-sm btn-danger" onclick="removerCorretor('${c.id}','${c.nome.replace(/'/g,"\\'")}')">Remover</button></td></tr>`;
+  const gradients=[
+    'linear-gradient(135deg,#F0997B,#D4541E)',
+    'linear-gradient(135deg,#85B7EB,#1B4F8A)',
+    'linear-gradient(135deg,#9FE1CB,#0F6E56)',
+    'linear-gradient(135deg,#FAC775,#854F0B)',
+    'linear-gradient(135deg,#ED93B1,#993556)',
+    'linear-gradient(135deg,#AFA9EC,#3C3489)',
+  ];
+
+  if(!data||!data.length){
+    el.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center">
+      <svg width="64" height="64" viewBox="0 0 80 80" fill="none" style="margin-bottom:16px;opacity:.3"><circle cx="40" cy="28" r="14" stroke="currentColor" stroke-width="3"/><path d="M14 66c0-14.359 11.64-26 26-26s26 11.641 26 26" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+      <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:8px">Nenhum corretor cadastrado</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:20px">Adicione corretores para começar</div>
+      <button onclick="openModalCorretor()" class="btn btn-primary">+ Cadastrar corretor</button>
+    </div>`;
+    return;
   }
-  el.innerHTML=html+'</tbody></table>';
+
+  let html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">';
+  for(const [i,c] of data.entries()){
+    const {count:abertos}=await db.from('pacotes').select('*',{count:'exact',head:true}).eq('corretor_id',c.id).eq('status','aberto');
+    const {count:concluidos}=await db.from('pacotes').select('*',{count:'exact',head:true}).eq('corretor_id',c.id).eq('status','concluido');
+    const iniciais=c.nome.split(' ').map(n=>n[0]).slice(0,2).join('');
+    const grad=gradients[i%gradients.length];
+    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px">
+      <div style="width:46px;height:46px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;margin-bottom:12px">${iniciais}</div>
+      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nome}</div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:14px">@${c.username}</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <div style="flex:1;background:var(--surface2);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:var(--accent)">${abertos||0}</div>
+          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.3px;margin-top:2px">Abertos</div>
+        </div>
+        <div style="flex:1;background:var(--surface2);border-radius:8px;padding:8px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:var(--green)">${concluidos||0}</div>
+          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.3px;margin-top:2px">Concluídos</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-outline" style="flex:1;font-size:12px" onclick="editarCorretor('${c.id}','${c.nome.replace(/'/g,"\'")}','${c.username}')">Editar</button>
+        <button class="btn btn-sm btn-danger" style="font-size:12px;padding:6px 10px" onclick="removerCorretor('${c.id}','${c.nome.replace(/'/g,"\'")}')" >✕</button>
+      </div>
+    </div>`;
+  }
+  html+=`<div onclick="openModalCorretor()" style="background:var(--surface);border:2px dashed var(--border);border-radius:16px;padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;min-height:190px;transition:border-color .15s"
+    onmouseover="this.style.borderColor='var(--accent)';this.style.background='var(--accent-bg)'"
+    onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
+    <div style="width:44px;height:44px;border-radius:50%;background:var(--accent-bg);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--accent)">+</div>
+    <div style="font-size:13px;font-weight:600;color:var(--accent)">Novo corretor</div>
+    <div style="font-size:11px;color:var(--ink3)">Cadastrar acesso</div>
+  </div>`;
+  html+='</div>';
+  el.innerHTML=html;
 }
 async function removerCorretor(id,nome){if(!confirm(`Remover corretor "${nome}"?`))return;await db.from('usuarios').delete().eq('id',id);toast('Corretor removido.','success');loadCorretores();}
 
@@ -1784,7 +1913,16 @@ async function loadPacotesCorretor(){
   // Busca TODOS os pacotes do corretor
   const {data:pacotes}=await db.from('pacotes').select('*').eq('corretor_id',currentUser.id).order('created_at',{ascending:false});
   if(!pacotes||!pacotes.length){
-    el.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">Nenhum pacote atribuído</div><div class="empty-sub">Aguarde o coordenador enviar um pacote</div></div>';
+    el.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center">
+      <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style="margin-bottom:20px;opacity:.35">
+        <rect x="12" y="20" width="56" height="44" rx="8" stroke="currentColor" stroke-width="3"/>
+        <path d="M12 32h56" stroke="currentColor" stroke-width="3"/>
+        <path d="M28 20V14a12 12 0 0124 0v6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="40" cy="50" r="6" stroke="currentColor" stroke-width="2.5"/>
+      </svg>
+      <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:6px">Nenhum pacote disponível</div>
+      <div style="font-size:13px;color:var(--ink3);max-width:240px;line-height:1.5">O coordenador ainda não enviou nenhum pacote para você</div>
+    </div>`;
     return;
   }
 
@@ -1824,7 +1962,16 @@ async function loadPacotesCorretor(){
   <div id="tab-disponiveis">`;
 
   if(!disponiveis.length){
-    html+='<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">Nenhum pacote disponível</div><div class="empty-sub">O coordenador ainda não enviou pacotes</div></div>';
+    html+=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center">
+      <svg width="64" height="64" viewBox="0 0 80 80" fill="none" style="margin-bottom:16px;opacity:.3">
+        <rect x="12" y="20" width="56" height="44" rx="8" stroke="currentColor" stroke-width="3"/>
+        <path d="M12 32h56" stroke="currentColor" stroke-width="3"/>
+        <path d="M28 20V14a12 12 0 0124 0v6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="40" cy="50" r="6" stroke="currentColor" stroke-width="2.5"/>
+      </svg>
+      <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px">Sem pacotes disponíveis</div>
+      <div style="font-size:12px;color:var(--ink3)">O coordenador ainda não enviou pacotes</div>
+    </div>`;
   }else{
     // Cards de pacotes disponíveis
     html+='<div style="display:grid;gap:16px">';
