@@ -1675,10 +1675,11 @@ async function renderCardPacote(p, soLeitura){
   const {data:notas}=await db.from('notas_redacao')
     .select('id,nota,situacao,motivo_zero,motivo_atraso,proposta,versao,nome_avulso,alunos(id,nome,numero,turma,serie)')
     .eq('pacote_id',p.id);
-  const totalLinhas=(notas||[]).length;
-  // Para atrasadas, total esperado vem do campo quantidade_atrasadas
-  const total=p.tipo==='atrasadas'?(p.quantidade_atrasadas||totalLinhas):totalLinhas;
-  const feitas=(notas||[]).filter(n=>(n.nota!==null)||n.situacao==='zerada').length;
+  const totalEsperado=p.quantidade_atrasadas||0;
+  const total=p.tipo==='atrasadas'?totalEsperado:(notas||[]).length;
+  const feitas=p.tipo==='atrasadas'
+    ?(notas||[]).filter(n=>n.nota!==null).length
+    :(notas||[]).filter(n=>(n.nota!==null)||n.situacao==='zerada').length;
   const earn=feitas*(p.valor_por_redacao||5);
   const enviado=p.status==='enviado'||p.status==='concluido';
   const [aberto,setAberto]=[false,null]; // controle de expansão
@@ -1702,26 +1703,25 @@ async function renderCardPacote(p, soLeitura){
       const propAt=n.proposta||'';
       const verAt=n.versao||'';
       const notaAt=n.nota;
-      if(nomeAt){
-        // Já preenchido — mostra linha com nota
-        const excluida=n.situacao==='nao_entregue'||n.situacao==='zerada';
-        alunosHTML+=`<div class="aluno-row" id="row-${n.id}">
-          <div class="aluno-num">${idx+1}</div>
-          <div class="aluno-nome">${nomeAt}
-            ${propAt?`<span style="font-size:11px;background:var(--blue-bg);color:var(--blue);padding:1px 7px;border-radius:10px;margin-left:6px">${propAt} ${verAt}ªv</span>`:''}
-          </div>
-          ${excluida
-            ?`<span class="badge badge-red" style="font-size:11px">Fora</span>`
-            :enviado||soLeitura
-              ?`<span style="font-weight:700;font-size:16px;color:${notaAt!==null?'var(--ink)':'var(--ink3)'}">${notaAt!==null?Number(notaAt).toFixed(1):'—'}</span>`
-              :`<input class="nota-input ${notaAt!==null?'nota-saved':''}" type="number" min="0" max="10" step="0.5"
-                  value="${notaAt!==null?Number(notaAt).toFixed(1):''}" placeholder="nota"
-                  data-id="${n.id}" data-pacote="${p.id}" data-valor="${p.valor_por_redacao||5}"
-                  onchange="salvarNota(this)"/>`
-          }
-        </div>`;
-      }
-      // não mostra linhas vazias — a busca reutilizável fica no rodapé do pacote
+      // Atrasadas — só mostra se tem nome (foi lançado)
+      if(!nomeAt) continue;
+      alunosHTML+=`<div class="aluno-row" id="row-${n.id}">
+        <div class="aluno-num">${idx+1}</div>
+        <div class="aluno-nome">${nomeAt}
+          ${propAt?`<span style="font-size:11px;background:var(--blue-bg);color:var(--blue);padding:1px 7px;border-radius:10px;margin-left:6px">${propAt} ${verAt?verAt+'ªv':''}</span>`:''}
+        </div>
+        ${enviado||soLeitura
+          ?`<span style="font-family:'Inter',sans-serif;font-weight:700;font-size:16px;color:${notaAt!==null?'var(--ink)':'var(--ink3)'}">${notaAt!==null?Number(notaAt).toFixed(1):'—'}</span>`
+          :`<div style="display:flex;align-items:center;gap:8px">
+              <input class="nota-input ${notaAt!==null?'nota-saved':''}" type="number" min="0" max="10" step="0.5"
+                value="${notaAt!==null?Number(notaAt).toFixed(1):''}" placeholder="nota"
+                data-id="${n.id}" data-pacote="${p.id}" data-valor="${p.valor_por_redacao||5}"
+                onchange="salvarNota(this)"/>
+              <button onclick="excluirLancamento('${n.id}','${p.id}')"
+                style="padding:4px 8px;font-size:11px;background:var(--red-bg);border:1px solid #F5C6C2;border-radius:6px;cursor:pointer;color:var(--red)">✕</button>
+            </div>`
+        }
+      </div>`;
       continue;
     }
     alunosHTML+=`<div class="aluno-row" id="row-${n.id}">
@@ -2172,6 +2172,13 @@ async function salvarNomeAvulso(notaId, nome, proposta, versao){
   await db.from('notas_redacao').update(update).eq('id', notaId);
 }
 
+async function excluirLancamento(notaId, pacId){
+  if(!confirm('Remover este lançamento?')) return;
+  await db.from('notas_redacao').delete().eq('id', notaId);
+  toast('Lançamento removido.','success');
+  loadPacotesCorretor();
+}
+
 let atrasadoSel = {}; // {pacoteId: {alunoId, nome}}
 let atrasadoTimer = {};
 
@@ -2215,27 +2222,24 @@ async function confirmarAtrasado(pacId){
   const notaRaw = document.getElementById('at-nota-'+pacId)?.value;
   if(!prop){ toast('Selecione a proposta','error'); return; }
   if(!ver){ toast('Selecione a versão','error'); return; }
-  if(notaRaw===''||notaRaw===undefined){ toast('Digite a nota','error'); return; }
+  if(notaRaw===''||notaRaw===undefined||notaRaw===null){ toast('Digite a nota','error'); return; }
   let nota = parseFloat(notaRaw);
   nota = Math.max(0, Math.min(10, Math.round(nota*2)/2));
-
-  // Busca uma linha avulsa vazia neste pacote
-  const {data:linhas} = await db.from('notas_redacao')
-    .select('id').eq('pacote_id', pacId).is('aluno_id', null).is('nome_avulso', null).limit(1);
-
-  if(linhas&&linhas.length>0){
-    // Preenche linha existente
-    await db.from('notas_redacao').update({
-      aluno_id: sel.alunoId, nome_avulso: sel.nome,
-      proposta: prop, versao: parseInt(ver), nota
-    }).eq('id', linhas[0].id);
-  } else {
-    // Cria nova linha (pacote permitiu mais)
-    await db.from('notas_redacao').insert({
-      pacote_id: pacId, aluno_id: sel.alunoId, nome_avulso: sel.nome,
-      proposta: prop, versao: parseInt(ver), nota, situacao: 'normal'
-    });
+  // Verifica limite
+  const {count:jaLancadas} = await db.from('notas_redacao').select('*',{count:'exact',head:true}).eq('pacote_id',pacId);
+  const pacoteInfo = await db.from('pacotes').select('quantidade_atrasadas').eq('id',pacId).single();
+  const limite = pacoteInfo.data?.quantidade_atrasadas || 999;
+  if((jaLancadas||0) >= limite){
+    toast(`Limite de ${limite} redações atingido. Edite o pacote para aumentar.`,'error');
+    return;
   }
+
+  // Sempre cria nova linha para atrasadas
+  const {error:insErr} = await db.from('notas_redacao').insert({
+    pacote_id: pacId, aluno_id: sel.alunoId, nome_avulso: sel.nome,
+    proposta: prop, versao: parseInt(ver), nota, situacao: 'normal'
+  });
+  if(insErr){ toast('Erro ao lançar: '+insErr.message,'error'); return; }
 
   // Limpa campos
   const inp = document.getElementById('at-busca-'+pacId);
