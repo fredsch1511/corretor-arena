@@ -121,6 +121,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
 #toast.show{opacity:1;transform:translateY(0)}#toast.success{background:var(--green)}#toast.error{background:var(--red)}
 @media(max-width:640px){.app-body{padding:16px}.form-grid{grid-template-columns:1fr}.login-box{padding:32px 24px}}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div id="toast"></div>
@@ -1149,13 +1150,16 @@ async function excluirPacote(id){if(!confirm('Excluir pacote e todas as notas? I
 async function loadNotasTurma(){
   const serie=document.getElementById('f-serie').value;
   const turma=document.getElementById('f-turma').value;
+  const bimNotas=parseInt(document.getElementById('f-bim-notas')?.value||'1');
   const el=document.getElementById('tabela-notas');
   const resumoEl=document.getElementById('notas-resumo');
   const statsEl=document.getElementById('notas-stats');
+  const btnExp=document.getElementById('btn-exportar-notas');
 
   if(!serie||!turma){
     el.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Selecione série e turma</div></div>';
     if(resumoEl)resumoEl.style.display='none';
+    if(btnExp)btnExp.style.display='none';
     return;
   }
   el.innerHTML='<div class="loading"><div class="spinner"></div> Carregando boletim...</div>';
@@ -1172,7 +1176,8 @@ async function loadNotasTurma(){
   let hist=[];
   for(let i=0;i<ids.length;i+=100){
     const batch=ids.slice(i,i+100);
-    const {data:h}=await db.from('notas_historicas').select('aluno_id,proposta,versao,nota').in('aluno_id',batch);
+    const {data:h}=await db.from('notas_historicas').select('aluno_id,proposta,versao,nota')
+      .in('aluno_id',batch).eq('bimestre',bimNotas);
     if(h)hist.push(...h);
   }
   let pacNotas=[];
@@ -1267,6 +1272,9 @@ async function loadNotasTurma(){
     <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:3px;background:var(--surface2);display:inline-block"></span>Sem nota</span>
   </div>`;
   el.innerHTML=table;
+  if(btnExp)btnExp.style.display='flex';
+  // Armazena dados para exportação
+  window._notasExportData={serie,turma,bimNotas,alunos,notasMap,COLUNAS};
 }
 
 
@@ -3052,6 +3060,63 @@ function iniciarRelogio(){
   }
   atualizar();
   setInterval(atualizar,1000);
+}
+
+function exportarNotasExcel(){
+  const d=window._notasExportData;
+  if(!d){toast('Carregue o boletim primeiro','error');return;}
+  const {serie,turma,bimNotas,alunos,notasMap,COLUNAS}=d;
+
+  // Cabeçalho
+  const cabecalho=['#','Nome',
+    ...COLUNAS.map(c=>c.label),
+    'Média'
+  ];
+
+  // Linhas de dados
+  const linhas=alunos.map(a=>{
+    const notas=COLUNAS.map(c=>{
+      const n=notasMap[a.id][c.prop+'·'+String(c.ver)];
+      return n!==null?parseFloat(n):'';
+    });
+    const vals=notas.filter(n=>n!=='');
+    const media=vals.length>0?parseFloat((vals.reduce((s,n)=>s+n,0)/6).toFixed(2)):'';
+    return [a.numero||'', a.nome, ...notas, media];
+  });
+
+  // Linha de média da turma
+  const mediaCols=COLUNAS.map(c=>{
+    const vals=alunos.map(a=>notasMap[a.id][c.prop+'·'+String(c.ver)]).filter(n=>n!==null).map(n=>parseFloat(n));
+    return vals.length>0?parseFloat((vals.reduce((s,n)=>s+n,0)/vals.length).toFixed(2)):'';
+  });
+  const mediaGeral=mediaCols.filter(n=>n!=='').length>0
+    ?parseFloat((mediaCols.filter(n=>n!=='').reduce((s,n)=>s+n,0)/mediaCols.filter(n=>n!=='').length).toFixed(2)):'';
+  const linhaMedia=['','Média da turma',...mediaCols,mediaGeral];
+
+  // Monta worksheet
+  const wsData=[cabecalho,...linhas,linhaMedia];
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+
+  // Larguras das colunas
+  ws['!cols']=[
+    {wch:5},   // #
+    {wch:35},  // Nome
+    ...COLUNAS.map(()=>({wch:10})), // notas
+    {wch:10},  // Média
+  ];
+
+  // Estilo da linha de média (última linha)
+  const lastRow=wsData.length;
+  ws['!rows']=[...Array(lastRow-1).fill({}),{hpt:18}];
+
+  // Cria workbook
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,`${serie} ${turma}`);
+
+  // Nome do arquivo
+  const nomeArquivo=`Notas_${serie.replace('º Ano','')}_${turma}_${bimNotas}Bim.xlsx`;
+  XLSX.writeFile(wb,nomeArquivo);
+  toast('Excel gerado! ✓','success');
 }
 
 function closeModal(id){document.getElementById(id).classList.add('hidden');}
