@@ -94,7 +94,7 @@ h1,h2,h3,h4{font-family:"Inter",sans-serif}
 .topbar-role{font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px}
 .role-coord{background:var(--accent-bg);color:var(--accent)}.role-corretor{background:var(--blue-bg);color:var(--blue)}
 .topbar-spacer{flex:1}.topbar-user{font-size:14px;color:var(--ink2)}
-.app-body{flex:1;padding:28px;max-width:1200px;margin:0 auto;width:100%}
+.app-body{flex:1;padding:16px 20px;max-width:1200px;margin:0 auto;width:100%}
 .page-title{font-size:26px;font-weight:700;margin-bottom:4px}.page-sub{color:var(--ink2);font-size:14px;margin-bottom:28px}
 .tabs{display:flex;gap:4px;margin-bottom:28px;background:var(--surface2);padding:4px;border-radius:var(--radius-sm);width:fit-content}
 .tab{padding:8px 18px;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--ink2);font-family:"Inter",sans-serif;transition:all .15s}
@@ -729,25 +729,20 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
 <div id="screen-corretor" class="screen">
   <div style="background:var(--surface);border-bottom:1px solid var(--border)">
   <!-- Linha principal -->
-  <div style="display:flex;align-items:center;gap:14px;padding:0 20px;height:60px">
-    <div id="corr-avatar" style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#F0997B,#D4541E);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">?</div>
+  <div style="display:flex;align-items:center;gap:12px;padding:0 16px;height:52px">
+    <div id="corr-avatar" style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#F0997B,#D4541E);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">?</div>
     <div>
-      <div style="font-size:15px;font-weight:700;color:var(--ink)" id="corretor-user-name"></div>
-      <div style="font-size:11px;color:var(--ink3)">Corretor Arena</div>
+      <div style="font-size:14px;font-weight:600;color:var(--ink)" id="corretor-user-name"></div>
+      <div style="font-size:11px;color:var(--ink3)">
+        <span id="corretor-valor-topbar" style="color:var(--accent);font-weight:600"></span>
+      </div>
     </div>
     <div style="margin-left:auto;text-align:right">
-      <div id="corretor-clock" style="font-size:18px;font-weight:800;color:var(--ink);letter-spacing:.5px;line-height:1"></div>
-      <div id="corretor-date" style="font-size:11px;color:var(--ink3);margin-top:2px"></div>
+      <div id="corretor-clock" style="font-size:14px;font-weight:700;color:var(--ink);letter-spacing:.5px;line-height:1"></div>
+      <div id="corretor-date" style="font-size:11px;color:var(--ink3);margin-top:1px"></div>
     </div>
     <button class="btn-ghost" onclick="toggleTheme()" id="theme-btn-corr" style="font-size:16px;padding:7px 10px">☀️</button>
     <button class="btn-ghost" onclick="doLogout()" style="font-size:13px;color:var(--ink2)">Sair</button>
-  </div>
-  <!-- Valor acumulado -->
-  <div style="margin:0 20px 14px">
-    <div style="background:var(--accent-bg);border:1px solid #F5C4A8;border-radius:12px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:11px;font-weight:600;color:#993C1D;text-transform:uppercase;letter-spacing:.5px">Valor acumulado no período</div>
-      <div id="corretor-valor-topbar" style="font-size:18px;font-weight:800;color:var(--accent);font-family:'Inter',sans-serif"></div>
-    </div>
   </div>
 </div></div>
 <div class="app-body">
@@ -1813,12 +1808,16 @@ async function loadPacotesCorretor(){
   const entregues=pacotes.filter(p=>p.status==='enviado'||p.status==='concluido');
 
   let html=`
-  <div class="page-title">Olá, ${currentUser.nome}!</div>
-
   <!-- ABAS -->
-  <div class="tabs" style="margin-bottom:24px">
-    <button class="tab active" id="tab-disp-btn" onclick="switchCorretorTab('disponiveis')">Disponíveis (${disponiveis.length})</button>
-    <button class="tab" id="tab-entr-btn" onclick="switchCorretorTab('entregues')">Entregues (${entregues.length})</button>
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button id="tab-disp-btn" onclick="switchCorretorTab('disponiveis')"
+      style="flex:1;padding:10px;border-radius:12px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:'Inter',sans-serif;background:var(--accent);color:#fff">
+      Disponíveis (${disponiveis.length})
+    </button>
+    <button id="tab-entr-btn" onclick="switchCorretorTab('entregues')"
+      style="flex:1;padding:10px;border-radius:12px;font-size:13px;font-weight:600;border:1px solid var(--border);cursor:pointer;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink2)">
+      Entregues (${entregues.length})
+    </button>
   </div>
 
   <!-- DISPONÍVEIS -->
