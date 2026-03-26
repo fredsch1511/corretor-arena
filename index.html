@@ -1988,7 +1988,7 @@ async function loadPacotesCorretor(){
     </div>`;
   } else {
     htmlDisp='<div style="display:grid;gap:12px">';
-    for(const p of disponiveisFiltrados) htmlDisp+=await renderCardPacote(p,false,todasNotasMap[p.id]||[]);
+    for(const p of disponiveisFiltrados) htmlDisp+=renderCardPacote(p,false,todasNotasMap[p.id]||[]);
     htmlDisp+='</div>';
   }
 
@@ -2005,7 +2005,7 @@ async function loadPacotesCorretor(){
     </div>`;
   } else {
     htmlEntr='<div style="display:grid;gap:12px">';
-    for(const p of entregues) htmlEntr+=await renderCardPacote(p,true,todasNotasMap[p.id]||[]);
+    for(const p of entregues) htmlEntr+=renderCardPacote(p,true,todasNotasMap[p.id]||[]);
     htmlEntr+='</div>';
   }
 
@@ -2083,16 +2083,8 @@ function _switchCorretorTab_legacy(tab){
   }
 }
 
-async function renderCardPacote(p, soLeitura, notasPreCarregadas){
-  let notas;
-  if(notasPreCarregadas!==undefined){
-    notas=notasPreCarregadas;
-  } else {
-    const {data:nd}=await db.from('notas_redacao')
-      .select('id,nota,situacao,motivo_zero,motivo_atraso,proposta,versao,nome_avulso,alunos(id,nome,numero,turma,serie)')
-      .eq('pacote_id',p.id);
-    notas=nd;
-  }
+function renderCardPacote(p, soLeitura, notas){
+  notas=notas||[];
   const totalEsperado=p.quantidade_atrasadas||0;
   const total=p.tipo==='atrasadas'?totalEsperado:(notas||[]).length;
   const feitas=p.tipo==='atrasadas'
