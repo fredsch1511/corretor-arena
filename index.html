@@ -349,6 +349,11 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       <span>Buscar aluno</span>
     </div>
+    <div style="height:1px;background:rgba(255,255,255,0.07);margin:8px 4px"></div>
+    <div class="sb-item" id="nav-config" onclick="showTab('tab-config')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span>Configurações</span>
+    </div>
   </nav>
 
   <!-- Footer -->
@@ -475,7 +480,107 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
       </div>
     </div>
 
-    <div id="tab-corretores" style="display:none">
+    <div id="tab-config" style="display:none">
+  <div style="max-width:640px">
+    <p style="font-size:13px;color:var(--ink2);margin-bottom:24px;line-height:1.6">
+      Defina o tema e o gênero de cada proposta por bimestre. Essas informações aparecem nos pacotes e orientam os corretores.
+    </p>
+
+    <!-- Seletor de bimestre -->
+    <div style="display:flex;gap:8px;margin-bottom:24px" id="cfg-bim-sel">
+      <button onclick="setConfigBim(1)" data-cbim="1" class="cfg-bim-btn" style="padding:8px 20px;border-radius:var(--radius-sm);border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s">1º Bim</button>
+      <button onclick="setConfigBim(2)" data-cbim="2" class="cfg-bim-btn" style="padding:8px 20px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s">2º Bim</button>
+      <button onclick="setConfigBim(3)" data-cbim="3" class="cfg-bim-btn" style="padding:8px 20px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s">3º Bim</button>
+      <button onclick="setConfigBim(4)" data-cbim="4" class="cfg-bim-btn" style="padding:8px 20px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s">4º Bim</button>
+    </div>
+
+    <!-- Cards das propostas -->
+    <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px">
+
+      <!-- P1 -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--accent-bg);border-bottom:1px solid #F5C4A8">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:12px;color:#fff">P1</div>
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--accent)">Proposta 1</div>
+          <div id="cfg-p1-preview" style="margin-left:auto;font-size:12px;color:var(--accent);opacity:.7;font-style:italic;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        </div>
+        <div style="padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tema</label>
+            <input type="text" id="cfg-p1-tema" placeholder="Ex: O racismo no Brasil"
+              oninput="document.getElementById('cfg-p1-preview').textContent=this.value"
+              style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);outline:none;transition:border-color .2s"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Gênero</label>
+            <input type="text" id="cfg-p1-genero" placeholder="Ex: Dissertação argumentativa"
+              style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);outline:none;transition:border-color .2s"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- P2 -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--blue-bg);border-bottom:1px solid #B5D4F4">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--blue);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:12px;color:#fff">P2</div>
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--blue)">Proposta 2</div>
+          <div id="cfg-p2-preview" style="margin-left:auto;font-size:12px;color:var(--blue);opacity:.7;font-style:italic;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        </div>
+        <div style="padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tema</label>
+            <input type="text" id="cfg-p2-tema" placeholder="Ex: A importância da leitura"
+              oninput="document.getElementById('cfg-p2-preview').textContent=this.value"
+              style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);outline:none;transition:border-color .2s"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Gênero</label>
+            <input type="text" id="cfg-p2-genero" placeholder="Ex: Conto"
+              style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);outline:none;transition:border-color .2s"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- P3 -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--green-bg);border-bottom:1px solid #A8D5BC">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--green);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:12px;color:#fff">P3</div>
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--green)">Proposta 3</div>
+          <div id="cfg-p3-preview" style="margin-left:auto;font-size:12px;color:var(--green);opacity:.7;font-style:italic;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        </div>
+        <div style="padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tema</label>
+            <input type="text" id="cfg-p3-tema" placeholder="Ex: Família e sociedade"
+              oninput="document.getElementById('cfg-p3-preview').textContent=this.value"
+              style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);outline:none;transition:border-color .2s"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Gênero</label>
+            <input type="text" id="cfg-p3-genero" placeholder="Ex: Crônica"
+              style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);outline:none;transition:border-color .2s"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Botão salvar -->
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div id="cfg-save-msg" style="font-size:13px;color:var(--green);display:none">✓ Salvo com sucesso!</div>
+      <div style="flex:1"></div>
+      <button class="btn btn-primary" onclick="salvarConfiguracoes()">Salvar configurações</button>
+    </div>
+  </div>
+</div>
+
+<div id="tab-corretores" style="display:none">
       <div class="section-header">
         <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600">Corretores</div>
         <button class="btn btn-primary btn-sm" onclick="openModalCorretor()">+ Novo Corretor</button>
@@ -875,21 +980,22 @@ function doLogout(){
 }
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function showTab(id){
-  const tabs=['tab-pacotes','tab-prep','tab-notas','tab-corretores','tab-alunos'];
+  const tabs=['tab-pacotes','tab-prep','tab-notas','tab-corretores','tab-alunos','tab-config'];
   tabs.forEach(t=>{const el=document.getElementById(t);if(el)el.style.display=t===id?'block':'none';});
   // Atualiza sidebar
-  const navMap={'tab-pacotes':'nav-pacotes','tab-prep':'nav-prep','tab-notas':'nav-notas','tab-corretores':'nav-corretores'};
+  const navMap={'tab-pacotes':'nav-pacotes','tab-prep':'nav-prep','tab-notas':'nav-notas','tab-corretores':'nav-corretores','tab-config':'nav-config'};
   document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('sb-active'));
   const activeNav=document.getElementById(navMap[id]);
   if(activeNav)activeNav.classList.add('sb-active');
   // Atualiza título topbar
-  const titles={'tab-pacotes':'Pacotes','tab-prep':'Preparação','tab-notas':'Notas','tab-corretores':'Corretores','tab-alunos':'Alunos'};
+  const titles={'tab-pacotes':'Pacotes','tab-prep':'Preparação','tab-notas':'Notas','tab-corretores':'Corretores','tab-alunos':'Alunos','tab-config':'Configurações'};
   const ptEl=document.getElementById('coord-page-title');
   if(ptEl)ptEl.textContent=titles[id]||'';
   if(id==='tab-notas')loadNotasTurma();
   if(id==='tab-corretores')loadCorretores();
   if(id==='tab-alunos')loadAlunosFiltro();
   if(id==='tab-prep')resetPrep();
+  if(id==='tab-config')loadConfiguracoes();
 }
 
 // DASHBOARD
@@ -2164,6 +2270,88 @@ async function salvarMotivoZero(){
   toast('Motivo salvo! ✓','success');
   loadPacotesCorretor();
 }
+// CONFIGURAÇÕES
+let configBimAtual = 1;
+let configCache = {}; // {bim: {p1_tema, p1_genero, p2_tema, p2_genero, p3_tema, p3_genero}}
+
+function setConfigBim(bim){
+  configBimAtual = bim;
+  // Atualiza visual dos botões
+  document.querySelectorAll('.cfg-bim-btn').forEach(btn => {
+    const b = parseInt(btn.dataset.cbim);
+    const active = b === bim;
+    btn.style.background = active ? 'var(--accent)' : 'var(--surface)';
+    btn.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    btn.style.color = active ? '#fff' : 'var(--ink2)';
+  });
+  // Carrega dados do bimestre
+  loadConfiguracoesBim(bim);
+}
+
+async function loadConfiguracoes(){
+  await loadConfiguracoesBim(configBimAtual);
+}
+
+async function loadConfiguracoesBim(bim){
+  // Verifica cache
+  if(configCache[bim]){
+    preencherCamposConfig(configCache[bim]);
+    return;
+  }
+  const {data} = await db.from('configuracoes_propostas')
+    .select('*').eq('bimestre', bim);
+  const cfg = {};
+  (data||[]).forEach(row => {
+    const p = row.proposta.toLowerCase(); // 'p1','p2','p3'
+    cfg[p+'_tema'] = row.tema || '';
+    cfg[p+'_genero'] = row.genero || '';
+  });
+  configCache[bim] = cfg;
+  preencherCamposConfig(cfg);
+}
+
+function preencherCamposConfig(cfg){
+  ['p1','p2','p3'].forEach(p => {
+    const temaEl = document.getElementById('cfg-'+p+'-tema');
+    const generoEl = document.getElementById('cfg-'+p+'-genero');
+    const previewEl = document.getElementById('cfg-'+p+'-preview');
+    if(temaEl) temaEl.value = cfg[p+'_tema'] || '';
+    if(generoEl) generoEl.value = cfg[p+'_genero'] || '';
+    if(previewEl) previewEl.textContent = cfg[p+'_tema'] || '';
+  });
+}
+
+async function salvarConfiguracoes(){
+  const bim = configBimAtual;
+  const propostas = ['P1','P2','P3'];
+  const msgEl = document.getElementById('cfg-save-msg');
+  if(msgEl) msgEl.style.display = 'none';
+
+  for(const prop of propostas){
+    const p = prop.toLowerCase();
+    const tema = document.getElementById('cfg-'+p+'-tema')?.value.trim() || '';
+    const genero = document.getElementById('cfg-'+p+'-genero')?.value.trim() || '';
+    await db.from('configuracoes_propostas').upsert(
+      {bimestre: bim, proposta: prop, tema, genero},
+      {onConflict: 'bimestre,proposta'}
+    );
+    // Atualiza cache
+    if(!configCache[bim]) configCache[bim] = {};
+    configCache[bim][p+'_tema'] = tema;
+    configCache[bim][p+'_genero'] = genero;
+  }
+
+  if(msgEl){ msgEl.style.display='block'; setTimeout(()=>msgEl.style.display='none', 3000); }
+  toast('Configurações salvas! ✓', 'success');
+}
+
+// Expõe temas das propostas para uso nos pacotes
+async function getTemaPropostas(bim){
+  if(configCache[bim]) return configCache[bim];
+  await loadConfiguracoesBim(bim);
+  return configCache[bim] || {};
+}
+
 function closeModal(id){document.getElementById(id).classList.add('hidden');}
 function setEl(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
 function showErr(el,msg){el.textContent=msg;el.style.display='block';}
