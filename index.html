@@ -1873,20 +1873,31 @@ async function renderCardPacote(p, soLeitura){
       </div>`;
       continue;
     }
-    alunosHTML+=`<div class="aluno-row" id="row-${n.id}">
-      <div class="aluno-num">${numLabel}</div>
-      <div class="aluno-nome">${n.alunos.nome}</div>
+    const nomeDisplay = n.situacao==='nao_entregue'
+      ? `<span style="text-decoration:line-through;color:var(--ink3)">${n.alunos.nome}</span>`
+      : n.alunos.nome;
+    alunosHTML+=`<div class="aluno-row" id="row-${n.id}" style="${n.situacao==='nao_entregue'?'background:#FFFBF5':''}">
+      <div class="aluno-num" style="${n.situacao==='nao_entregue'?'background:#FDF5E0;color:#854F0B':''}">${numLabel}</div>
+      <div class="aluno-nome">${nomeDisplay}</div>
       ${excluida
-        ?`<div style="display:flex;align-items:center;gap:8px">${badgeMap[n.situacao]}<span style="font-size:12px;color:var(--ink3);font-style:italic">fora do envelope</span></div>`
+        ?`<div style="display:flex;align-items:center;gap:8px">
+            <span style="background:#FDF5E0;color:#854F0B;border:1px solid #FAC775;border-radius:6px;font-size:11px;font-weight:600;padding:4px 10px">Não consta no pacote</span>
+            ${!soLeitura&&!enviado?`<button onclick="desmarcarNaoConsta('${n.id}')" style="padding:3px 8px;border-radius:6px;font-size:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--ink3)">desfazer</button>`:''}
+          </div>`
         :soLeitura||enviado
           ?`<div style="display:flex;align-items:center;gap:8px">
               <span style="font-family:"Inter",sans-serif;font-weight:700;font-size:16px;color:${n.nota!==null?'var(--ink)':'var(--ink3)'}">${n.nota!==null?Number(n.nota).toFixed(1):'—'}</span>
               ${motivoZero}
             </div>`
-          :`<input class="nota-input ${n.nota!==null?'nota-saved':''}" type="number" min="0" max="10" step="0.5" placeholder="nota"
-              value="${n.nota!==null?Number(n.nota).toFixed(1):''}"
-              data-id="${n.id}" data-pacote="${p.id}" data-valor="${p.valor_por_redacao||5}"
-              onchange="salvarNota(this)"/>`
+          :`<div style="display:flex;align-items:center;gap:8px">
+              <input class="nota-input ${n.nota!==null?'nota-saved':''}" type="number" min="0" max="10" step="0.5" placeholder="nota"
+                value="${n.nota!==null?Number(n.nota).toFixed(1):''}"
+                data-id="${n.id}" data-pacote="${p.id}" data-valor="${p.valor_por_redacao||5}"
+                onchange="salvarNota(this)" ${n.situacao==='nao_entregue'?'disabled style="display:none"':''}/>
+              ${n.situacao!=='nao_entregue'?`<button onclick="marcarNaoConsta('${n.id}')"
+                style="padding:5px 10px;border-radius:8px;font-size:11px;font-weight:600;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;color:var(--ink2);white-space:nowrap;font-family:'Inter',sans-serif">
+                Não consta</button>`:''}
+            </div>`
       }
     </div>
     ${!soLeitura&&!enviado&&n.nota===0?`
@@ -2453,6 +2464,18 @@ async function salvarNomeAvulso(notaId, nome, proposta, versao){
   if(proposta) update.proposta = proposta;
   if(versao) update.versao = parseInt(versao);
   await db.from('notas_redacao').update(update).eq('id', notaId);
+}
+
+async function marcarNaoConsta(notaId){
+  await db.from('notas_redacao').update({situacao:'nao_entregue',nota:null}).eq('id',notaId);
+  toast('Marcado como não consta no pacote','success');
+  loadPacotesCorretor();
+}
+
+async function desmarcarNaoConsta(notaId){
+  await db.from('notas_redacao').update({situacao:'normal'}).eq('id',notaId);
+  toast('Marcação removida','success');
+  loadPacotesCorretor();
 }
 
 async function excluirLancamento(notaId, pacId){
