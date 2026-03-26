@@ -574,7 +574,7 @@ async function loadPacotesLista(){
     el.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Nenhum pacote criado ainda</div><div class="empty-sub">Clique em "+ Novo Pacote" para começar</div></div>';
     return;
   }
-  const statusBadge=s=>s==='aberto'?'<span class="badge badge-orange">Em andamento</span>':s==='enviado'?'<span class="badge badge-blue">Enviado</span>':'<span class="badge badge-green">Concluído</span>';
+  const statusBadge=s=>s==='aberto'?'<span class="badge badge-orange">Em andamento</span>':s==='enviado'?'<span class="badge badge-blue">Enviado pelo corretor</span>':'<span class="badge badge-green">Físico recebido</span>';
   let html='<table><thead><tr><th>Pacote</th><th>Corretor</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
   for(const p of data){
     const desc=p.tipo==='atrasadas'?'Atrasadas':`${p.serie||''} ${p.turma||''}`;
@@ -583,9 +583,11 @@ async function loadPacotesLista(){
       <td><strong style="font-family:'Syne',sans-serif">${p.nome}</strong><br><span style="font-size:12px;color:var(--ink3)">${desc}${prop}</span></td>
       <td>${p.usuarios?.nome||'—'}</td>
       <td>${statusBadge(p.status)}</td>
-      <td><div style="display:flex;gap:6px">
-        ${p.status==='enviado'?`<button class="btn btn-sm btn-blue" onclick="reabrirPacote('${p.id}')">Reabrir</button>`:''}
-        ${p.status==='aberto'?`<button class="btn btn-sm btn-success" onclick="encerrarPacote('${p.id}')">Encerrar</button>`:''}
+      <td><div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${p.status==='enviado'?`
+          <button class="btn btn-sm btn-success" onclick="receberFisico('${p.id}')">📦 Físico recebido</button>
+          <button class="btn btn-sm btn-blue" onclick="reabrirPacote('${p.id}')">Reabrir</button>`:''}
+        ${p.status==='aberto'?`<button class="btn btn-sm btn-outline" onclick="reabrirPacote('${p.id}')">Reabrir</button>`:''}
         <button class="btn btn-sm btn-outline" onclick="gerarPDF('${p.id}','${p.nome.replace(/'/g,"\'")}')" title="Relatório PDF">PDF</button>
         <button class="btn btn-sm btn-danger" onclick="excluirPacote('${p.id}')">Excluir</button>
       </div></td>
@@ -596,6 +598,7 @@ async function loadPacotesLista(){
 
 async function encerrarPacote(id){if(!confirm('Encerrar este pacote?'))return;await db.from('pacotes').update({status:'concluido'}).eq('id',id);toast('Pacote encerrado! ✓','success');loadDashboard();}
 async function reabrirPacote(id){if(!confirm('Reabrir para o corretor editar?'))return;await db.from('pacotes').update({status:'aberto'}).eq('id',id);toast('Pacote reaberto! ✓','success');loadDashboard();}
+async function receberFisico(id){if(!confirm('Confirmar recebimento do pacote físico? O pacote será encerrado.'))return;await db.from('pacotes').update({status:'concluido'}).eq('id',id);toast('Pacote físico recebido! ✓','success');loadDashboard();}
 async function excluirPacote(id){if(!confirm('Excluir pacote e todas as notas? Irreversível.'))return;await db.from('pacotes').delete().eq('id',id);toast('Excluído.','success');loadDashboard();}
 
 // NOTAS POR TURMA
@@ -820,14 +823,24 @@ async function criarPacote(){
     if(!serie){showErr(errEl,'Selecione a série.');return;}
     if(!turmasSel.length){showErr(errEl,'Selecione ao menos uma turma.');return;}
     versao=parseInt(versaoStr);
-    turma=turmasSel.join('+');
+    // Cria um pacote separado por turma
+    let pacotesCriados=0;
     for(const t of turmasSel){
       const {data:als}=await db.from('alunos').select('id').eq('serie',serie).eq('turma',t);
-      inserts.push(...(als||[]).map(a=>({aluno_id:a.id,nota:null,situacao:'normal',proposta:null,versao:null})));
+      if(!als?.length)continue;
+      const nomeT=`${serie} ${t} — ${proposta} · ${versao}ªv`;
+      const {data:pac,error:pacErr}=await db.from('pacotes').insert({
+        nome:nomeT,tipo:'normal',serie,turma:t,proposta,versao,
+        corretor_id:corretorId,valor_por_redacao:valor,status:'aberto'
+      }).select().single();
+      if(pacErr){showErr(errEl,'Erro ao criar pacote: '+pacErr.message);return;}
+      await db.from('notas_redacao').insert(als.map(a=>({pacote_id:pac.id,aluno_id:a.id,nota:null,situacao:'normal',proposta:null,versao:null})));
+      pacotesCriados++;
     }
-    if(!inserts.length){showErr(errEl,'Nenhum aluno encontrado nas turmas selecionadas.');return;}
-    const turmasLabel=turmasSel.length===1?turmasSel[0]:turmasSel.join(', ');
-    nomePacote=`${serie} ${turmasLabel} — ${proposta} · ${versao}ªv`;
+    closeModal('modal-pacote');
+    toast(`${pacotesCriados} pacote(s) criado(s)! ✓`,'success');
+    loadDashboard();
+    return;
   }else{
     const sels=Object.entries(atrasadasSelecionadas);
     if(!sels.length){showErr(errEl,'Selecione ao menos um aluno.');return;}
@@ -1022,7 +1035,7 @@ async function renderCardPacote(p, soLeitura){
   }
 
   const statusBanner=enviado
-    ?`<div style="background:var(--green-bg);border:1px solid #A8D5BC;border-radius:var(--radius);padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px"><span>✅</span><span style="font-size:14px;font-weight:500;color:var(--green)">${p.status==='concluido'?'Concluído pelo coordenador':'Pacote enviado — aguardando coordenador'}</span></div>`
+    ?`<div style="background:var(--green-bg);border:1px solid #A8D5BC;border-radius:var(--radius);padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px"><span>✅</span><span style="font-size:14px;font-weight:500;color:var(--green)">${p.status==='concluido'?'Concluído pelo coordenador':'Pacote enviado — aguardando recebimento físico'}</span></div>`
     :`<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary btn-sm" onclick="enviarPacote('${p.id}')">Enviar Pacote ↗</button></div>`;
 
   return `
@@ -1063,15 +1076,41 @@ async function salvarNota(input){
   if(isNaN(val)){input.value='';return;}
   val=Math.max(0,Math.min(10,Math.round(val*2)/2));
   input.value=val.toFixed(1);
-  const {error}=await db.from('notas_redacao').update({nota:val,updated_at:new Date().toISOString()}).eq('id',input.dataset.id);
+  const {error}=await db.from('notas_redacao').update({nota:val,updated_at:new Date().toISOString(),motivo_zero:null}).eq('id',input.dataset.id);
   if(error){toast('Erro ao salvar nota','error');return;}
   input.classList.add('nota-saved');
+  input.style.borderColor='var(--green)';
+  input.style.background='var(--green-bg)';
   toast('Nota salva! ✓','success');
-  // Se nota é 0, abre modal de motivo
-  if(val===0){
-    setTimeout(()=>abrirMotivoZero(input.dataset.id),300);
+  // Se nota é 0, mostra motivos inline abaixo da linha
+  const row=input.closest('.aluno-row');
+  const existingMotivos=row?.parentElement?.querySelector('#motivos-'+input.dataset.id);
+  if(existingMotivos)existingMotivos.remove();
+  if(val===0&&row){
+    const motivosEl=document.createElement('div');
+    motivosEl.id='motivos-'+input.dataset.id;
+    motivosEl.style.cssText='padding:8px 16px 12px 56px;background:var(--yellow-bg);border-bottom:1px solid var(--border)';
+    motivosEl.innerHTML=`<div style="font-size:12px;color:var(--yellow);font-weight:600;margin-bottom:8px">Motivo da nota zero:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px" id="tags-${input.dataset.id}">
+        ${['Fuga ao tema','Fuga ao gênero','Folha inadequada','Texto a lápis','Plágio','Proposta trocada','Impropérios'].map(m=>
+          `<span onclick="selecionarMotivoZero('${input.dataset.id}','${m}',this)"
+            style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--yellow);
+            background:var(--surface);color:var(--yellow);cursor:pointer;font-weight:500;transition:all .15s">${m}</span>`
+        ).join('')}
+      </div>`;
+    row.insertAdjacentElement('afterend',motivosEl);
   }
-  loadPacotesCorretor();
+}
+
+async function selecionarMotivoZero(notaId,motivo,el){
+  // Toggle seleção visual
+  const container=document.getElementById('tags-'+notaId);
+  container.querySelectorAll('span').forEach(s=>{
+    s.style.background='var(--surface)';s.style.color='var(--yellow)';
+  });
+  el.style.background='var(--yellow)';el.style.color='#fff';
+  await db.from('notas_redacao').update({motivo_zero:motivo}).eq('id',notaId);
+  toast('Motivo salvo! ✓','success');
 }
 
 async function enviarPacote(id){
