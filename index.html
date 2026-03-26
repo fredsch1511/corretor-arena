@@ -200,11 +200,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
     <p class="page-sub" id="coord-sub">Bem-vindo!</p>
     <div class="tabs">
       <button class="tab active" onclick="showTab('tab-pacotes')">Pacotes</button>
-      <button class="tab" onclick="showTab('tab-notas')">Notas por Turma</button>
+      <button class="tab" onclick="showTab('tab-prep')">Preparação</button>
+      <button class="tab" onclick="showTab('tab-notas')">Notas</button>
       <button class="tab" onclick="showTab('tab-corretores')">Corretores</button>
       <button class="tab" onclick="showTab('tab-alunos')">Alunos</button>
-      <button class="tab" onclick="showTab('tab-medias')">Médias</button>
-      <button class="tab" onclick="showTab('tab-prep')">Preparação</button>
     </div>
     <div id="tab-pacotes">
       <div class="stats-row">
@@ -221,27 +220,25 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
     </div>
     <div id="tab-notas" style="display:none">
       <div class="section-header">
-        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600">Notas por Turma</div>
+        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600">Boletim da Turma</div>
         <div class="filter-row">
-          <select id="f-serie" onchange="loadNotasTurma()"><option value="">Todas as séries</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select>
-          <select id="f-turma" onchange="loadNotasTurma()"><option value="">Todas as turmas</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option></select>
-          <select id="f-proposta" onchange="loadNotasTurma()"><option value="">Todas as propostas</option><option>P1</option><option>P2</option><option>P3</option></select>
-          <select id="f-versao" onchange="loadNotasTurma()"><option value="">Todas as versões</option><option value="1">1ª Versão</option><option value="2">2ª Versão</option></select>
+          <select id="f-serie" onchange="loadNotasTurma()">
+            <option value="">Série...</option>
+            <option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
+          </select>
+          <select id="f-turma" onchange="loadNotasTurma()">
+            <option value="">Turma...</option>
+            <option>A</option><option>B</option><option>C</option><option>D</option>
+            <option>E</option><option>F</option><option>G</option><option>H</option>
+          </select>
         </div>
       </div>
-      <div id="tabela-notas"><div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Selecione os filtros acima</div></div></div>
-    </div>
-    <div id="tab-medias" style="display:none">
-      <div class="section-header">
-        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600">Médias dos Alunos</div>
-        <div class="filter-row">
-          <select id="f-media-serie" onchange="loadMedias()"><option value="">Selecione a série...</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select>
-          <select id="f-media-turma" onchange="loadMedias()"><option value="">Selecione a turma...</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option></select>
-        </div>
+      <!-- RESUMO DA TURMA -->
+      <div id="notas-resumo" style="display:none;margin-bottom:20px">
+        <div class="stats-row" style="margin-bottom:0" id="notas-stats"></div>
       </div>
-      <div id="tabela-medias"><div class="empty-state"><div class="empty-icon">📈</div><div class="empty-title">Selecione série e turma</div></div></div>
+      <div id="tabela-notas"><div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Selecione série e turma</div></div></div>
     </div>
-
     <div id="tab-prep" style="display:none">
       <div class="section-header">
         <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600">Preparação de Turma</div>
@@ -608,13 +605,12 @@ function doLogout(){
 }
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function showTab(id){
-  const tabs=['tab-pacotes','tab-notas','tab-corretores','tab-alunos'];
-  tabs.forEach(t=>document.getElementById(t).style.display=t===id?'block':'none');
+  const tabs=['tab-pacotes','tab-prep','tab-notas','tab-corretores','tab-alunos'];
+  tabs.forEach(t=>{const el=document.getElementById(t);if(el)el.style.display=t===id?'block':'none';});
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===id));
   if(id==='tab-notas')loadNotasTurma();
   if(id==='tab-corretores')loadCorretores();
   if(id==='tab-alunos')loadAlunosFiltro();
-  if(id==='tab-medias')loadMedias();
   if(id==='tab-prep')resetPrep();
 }
 
@@ -1392,12 +1388,13 @@ function toggleTheme(){
 let prepDados={};
 
 function resetPrep(){
-  document.getElementById('prep-serie').value='';
-  document.getElementById('prep-turma').innerHTML='<option value="">Selecione a série</option>';
+  const fs=document.getElementById('prep-serie');if(fs)fs.value='';
+  const ft=document.getElementById('prep-turma');if(ft)ft.innerHTML='<option value="">Selecione a série</option>';
   document.querySelectorAll('input[name="prep-prop"]').forEach(r=>r.checked=false);
   document.querySelectorAll('input[name="prep-versao"]').forEach(r=>r.checked=false);
-  document.getElementById('prep-lista').innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Selecione série, turma, proposta e versão</div></div>';
-  document.getElementById('prep-footer').style.display='none';
+  const pl=document.getElementById('prep-lista');
+  if(pl)pl.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Selecione série, turma, proposta e versão</div></div>';
+  const pf=document.getElementById('prep-footer');if(pf)pf.style.display='none';
   prepDados={};
 }
 
@@ -1427,7 +1424,8 @@ async function loadPrepAlunos(){
   alunos.forEach(a=>{prepDados[a.id]={aluno:a,situacao:'normal',motivo:''};});
 
   renderPrepLista(alunos);
-  document.getElementById('prep-footer').style.display='flex';
+  const pf=document.getElementById('prep-footer');
+  if(pf){pf.style.display='flex';}
   atualizarPrepCount();
 }
 
