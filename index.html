@@ -204,6 +204,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
       <button class="tab" onclick="showTab('tab-corretores')">Corretores</button>
       <button class="tab" onclick="showTab('tab-alunos')">Alunos</button>
       <button class="tab" onclick="showTab('tab-medias')">Médias</button>
+      <button class="tab" onclick="showTab('tab-prep')">Preparação</button>
     </div>
     <div id="tab-pacotes">
       <div class="stats-row">
@@ -239,6 +240,58 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
         </div>
       </div>
       <div id="tabela-medias"><div class="empty-state"><div class="empty-icon">📈</div><div class="empty-title">Selecione série e turma</div></div></div>
+    </div>
+
+    <div id="tab-prep" style="display:none">
+      <div class="section-header">
+        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600">Preparação de Turma</div>
+      </div>
+      <!-- Seleção -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
+        <div class="field" style="margin:0">
+          <label>Série</label>
+          <select id="prep-serie" onchange="loadPrepTurmas()" style="margin-top:6px">
+            <option value="">Selecione...</option>
+            <option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label>Turma</label>
+          <select id="prep-turma" onchange="loadPrepAlunos()" style="margin-top:6px">
+            <option value="">Selecione a série</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label>Proposta</label>
+          <div class="radio-group" style="margin-top:6px">
+            <label class="radio-opt"><input type="radio" name="prep-prop" value="P1" onchange="loadPrepAlunos()"> P1</label>
+            <label class="radio-opt"><input type="radio" name="prep-prop" value="P2" onchange="loadPrepAlunos()"> P2</label>
+            <label class="radio-opt"><input type="radio" name="prep-prop" value="P3" onchange="loadPrepAlunos()"> P3</label>
+          </div>
+        </div>
+        <div class="field" style="margin:0">
+          <label>Versão</label>
+          <div class="radio-group" style="margin-top:6px">
+            <label class="radio-opt"><input type="radio" name="prep-versao" value="1" onchange="loadPrepAlunos()"> 1ª</label>
+            <label class="radio-opt"><input type="radio" name="prep-versao" value="2" onchange="loadPrepAlunos()"> 2ª</label>
+          </div>
+        </div>
+      </div>
+      <!-- Lista de alunos -->
+      <div id="prep-lista"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Selecione série, turma, proposta e versão</div></div></div>
+      <!-- Rodapé com ação -->
+      <div id="prep-footer" style="display:none;margin-top:16px;padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <span id="prep-count-normal" style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--green)">0</span>
+            <span style="font-size:14px;color:var(--ink2);margin-left:4px">para correção</span>
+            <span style="margin:0 12px;color:var(--border)">·</span>
+            <span id="prep-count-fora" style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--red)">0</span>
+            <span style="font-size:14px;color:var(--ink2);margin-left:4px">fora do envelope</span>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="salvarPreparacao()">Salvar Preparação</button>
+        </div>
+      </div>
     </div>
 
     <div id="tab-corretores" style="display:none">
@@ -315,15 +368,20 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
 
     <!-- ATRASADAS -->
     <div id="pk-atrasadas-wrap" style="display:none">
-      <div class="field" style="margin-bottom:16px">
-        <label>Filtrar alunos</label>
-        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-          <select id="at-f-serie" onchange="loadAlunosAtrasadas()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);outline:none"><option value="">Filtrar por série...</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select>
-          <select id="at-f-turma" onchange="loadAlunosAtrasadas()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);outline:none"><option value="">Filtrar por turma...</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option></select>
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="field">
+          <label>Série</label>
+          <select id="at-serie" style="margin-top:6px">
+            <option value="">Selecione...</option>
+            <option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
+          </select>
         </div>
-        <div id="at-alunos-list" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-top:10px"><div style="font-size:13px;color:var(--ink3);padding:8px">Selecione série/turma para filtrar alunos</div></div>
-        <div id="at-selecionados" style="margin-top:10px;font-size:13px;color:var(--ink2);font-weight:500"></div>
+        <div class="field">
+          <label>Quantidade de redações</label>
+          <input type="number" id="at-quantidade" min="1" max="200" placeholder="ex: 12" style="margin-top:6px"/>
+        </div>
       </div>
+      <div id="at-selecionados" style="font-size:13px;color:var(--ink2);font-weight:500"></div>
     </div>
 
     <!-- PROPOSTA E VERSÃO -->
@@ -345,6 +403,11 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
       </div>
     </div>
 
+    <!-- DATAS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="field"><label>Data de retirada</label><input type="date" id="pk-data-retirada" style="margin-top:6px"/></div>
+      <div class="field"><label>Data de devolução</label><input type="date" id="pk-data-devolucao" style="margin-top:6px"/></div>
+    </div>
     <!-- CORRETOR E VALOR -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div class="field"><label>Corretor</label><select id="pk-corretor"><option value="">Carregando...</option></select></div>
@@ -552,6 +615,7 @@ function showTab(id){
   if(id==='tab-corretores')loadCorretores();
   if(id==='tab-alunos')loadAlunosFiltro();
   if(id==='tab-medias')loadMedias();
+  if(id==='tab-prep')resetPrep();
 }
 
 // DASHBOARD
@@ -831,7 +895,8 @@ async function criarPacote(){
       const nomeT=`${serie} ${t} — ${proposta} · ${versao}ªv`;
       const {data:pac,error:pacErr}=await db.from('pacotes').insert({
         nome:nomeT,tipo:'normal',serie,turma:t,proposta,versao,
-        corretor_id:corretorId,valor_por_redacao:valor,status:'aberto'
+        corretor_id:corretorId,valor_por_redacao:valor,status:'aberto',
+        data_retirada:dataRet||null,data_devolucao:dataDev||null
       }).select().single();
       if(pacErr){showErr(errEl,'Erro ao criar pacote: '+pacErr.message);return;}
       await db.from('notas_redacao').insert(als.map(a=>({pacote_id:pac.id,aluno_id:a.id,nota:null,situacao:'normal',proposta:null,versao:null})));
@@ -1004,18 +1069,36 @@ async function renderCardPacote(p, soLeitura){
   };
 
   let alunosHTML='';
-  for(const n of (notas||[])){
-    if(!n.alunos)continue;
+  for(const [idx,n] of (notas||[]).entries()){
     const excluida=n.situacao==='nao_entregue'||n.situacao==='zerada';
     const prop=n.proposta||p.proposta||'';
     const ver=n.versao||p.versao||'';
-    const propTag=p.tipo==='atrasadas'?`<span style="font-size:11px;background:var(--blue-bg);color:var(--blue);padding:1px 7px;border-radius:10px;margin-left:6px">${prop} ${ver}ªv</span>`:'';
-    const turmaTag=p.tipo==='atrasadas'?`<span style="font-size:11px;color:var(--ink3);margin-left:4px">${n.alunos.serie} ${n.alunos.turma}</span>`:'';
-    const motivoZero=n.motivo_zero?`<span style="font-size:11px;color:var(--yellow);margin-left:6px">${n.motivo_zero.replace(/_/g,' ')}</span>`:'';
+    const motivoZero=n.motivo_zero?`<span style="font-size:11px;color:var(--yellow);margin-left:6px">${n.motivo_zero}</span>`:'';
+    const numLabel=n.alunos?n.alunos.numero||'?':(idx+1);
 
-    alunosHTML+=`<div class="aluno-row">
-      <div class="aluno-num">${n.alunos.numero||'?'}</div>
-      <div class="aluno-nome">${n.alunos.nome}${turmaTag}${propTag}</div>
+    // Linha avulsa (atrasada sem aluno vinculado)
+    if(!n.alunos){
+      alunosHTML+=`<div class="aluno-row" style="flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:12px;width:100%">
+          <div class="aluno-num">${idx+1}</div>
+          <input type="text" placeholder="Nome do aluno" value="${n.nome_avulso||''}"
+            style="flex:1;padding:7px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);outline:none"
+            onchange="salvarNomeAvulso('${n.id}',this.value)" ${soLeitura||enviado?'disabled':''}/>
+          ${soLeitura||enviado
+            ?`<span style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:${n.nota!==null?'var(--ink)':'var(--ink3)'}">${n.nota!==null?Number(n.nota).toFixed(1):'—'}</span>`
+            :`<input class="nota-input ${n.nota!==null?'nota-saved':''}" type="number" min="0" max="10" step="0.5" placeholder="nota"
+              value="${n.nota!==null?Number(n.nota).toFixed(1):''}"
+              data-id="${n.id}" data-pacote="${p.id}" data-valor="${p.valor_por_redacao||5}"
+              onchange="salvarNota(this)" style="width:72px"/>`
+          }
+        </div>
+      </div>`;
+      continue;
+    }
+
+    alunosHTML+=`<div class="aluno-row" id="row-${n.id}">
+      <div class="aluno-num">${numLabel}</div>
+      <div class="aluno-nome">${n.alunos.nome}</div>
       ${excluida
         ?`<div style="display:flex;align-items:center;gap:8px">${badgeMap[n.situacao]}<span style="font-size:12px;color:var(--ink3);font-style:italic">fora do envelope</span></div>`
         :soLeitura||enviado
@@ -1023,15 +1106,24 @@ async function renderCardPacote(p, soLeitura){
               <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:${n.nota!==null?'var(--ink)':'var(--ink3)'}">${n.nota!==null?Number(n.nota).toFixed(1):'—'}</span>
               ${motivoZero}
             </div>`
-          :`<div style="display:flex;align-items:center;gap:8px">
-              <input class="nota-input ${n.nota!==null?'nota-saved':''}" type="number" min="0" max="10" step="0.5" placeholder="nota"
-                value="${n.nota!==null?Number(n.nota).toFixed(1):''}"
-                data-id="${n.id}" data-pacote="${p.id}" data-valor="${p.valor_por_redacao||5}"
-                onchange="salvarNota(this)"/>
-              ${n.nota===0||n.nota==='0'?`<button onclick="abrirMotivoZero('${n.id}')" style="font-size:11px;padding:4px 8px;border:1px solid var(--yellow);border-radius:6px;background:var(--yellow-bg);color:var(--yellow);cursor:pointer">motivo</button>`:''}
-            </div>`
+          :`<input class="nota-input ${n.nota!==null?'nota-saved':''}" type="number" min="0" max="10" step="0.5" placeholder="nota"
+              value="${n.nota!==null?Number(n.nota).toFixed(1):''}"
+              data-id="${n.id}" data-pacote="${p.id}" data-valor="${p.valor_por_redacao||5}"
+              onchange="salvarNota(this)"/>`
       }
-    </div>`;
+    </div>
+    ${!soLeitura&&!enviado&&n.nota===0?`
+    <div id="motivos-${n.id}" style="padding:8px 16px 12px 56px;background:var(--yellow-bg);border-bottom:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--yellow);font-weight:600;margin-bottom:8px">Motivo da nota zero:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px" id="tags-${n.id}">
+        ${['Fuga ao tema','Fuga ao gênero','Folha inadequada','Texto a lápis','Plágio','Proposta trocada','Impropérios'].map(m=>
+          `<span onclick="selecionarMotivoZero('${n.id}','${m}',this)"
+            style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid ${n.motivo_zero===m?'var(--yellow)':'var(--border)'};
+            background:${n.motivo_zero===m?'var(--yellow)':'var(--surface)'};
+            color:${n.motivo_zero===m?'#fff':'var(--ink2)'};cursor:pointer;font-weight:500;transition:all .15s">${m}</span>`
+        ).join('')}
+      </div>
+    </div>`:''}`;
   }
 
   const statusBanner=enviado
@@ -1296,6 +1388,136 @@ function toggleTheme(){
     });
   });
 })();
+// PREPARAÇÃO
+let prepDados={};
+
+function resetPrep(){
+  document.getElementById('prep-serie').value='';
+  document.getElementById('prep-turma').innerHTML='<option value="">Selecione a série</option>';
+  document.querySelectorAll('input[name="prep-prop"]').forEach(r=>r.checked=false);
+  document.querySelectorAll('input[name="prep-versao"]').forEach(r=>r.checked=false);
+  document.getElementById('prep-lista').innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Selecione série, turma, proposta e versão</div></div>';
+  document.getElementById('prep-footer').style.display='none';
+  prepDados={};
+}
+
+async function loadPrepTurmas(){
+  const serie=document.getElementById('prep-serie').value;
+  const sel=document.getElementById('prep-turma');
+  if(!serie){sel.innerHTML='<option value="">Selecione a série</option>';return;}
+  const {data}=await db.from('alunos').select('turma').eq('serie',serie);
+  const turmas=[...new Set((data||[]).map(a=>a.turma))].sort();
+  sel.innerHTML='<option value="">Selecione...</option>'+turmas.map(t=>`<option value="${t}">${t}</option>`).join('');
+}
+
+async function loadPrepAlunos(){
+  const serie=document.getElementById('prep-serie').value;
+  const turma=document.getElementById('prep-turma').value;
+  const proposta=document.querySelector('input[name="prep-prop"]:checked')?.value;
+  const versao=document.querySelector('input[name="prep-versao"]:checked')?.value;
+  if(!serie||!turma||!proposta||!versao)return;
+
+  const el=document.getElementById('prep-lista');
+  el.innerHTML='<div class="loading"><div class="spinner"></div> Carregando alunos...</div>';
+
+  const {data:alunos}=await db.from('alunos').select('id,nome,numero').eq('serie',serie).eq('turma',turma).order('numero');
+  if(!alunos||!alunos.length){el.innerHTML='<div class="empty-state"><div class="empty-title">Nenhum aluno encontrado</div></div>';return;}
+
+  prepDados={};
+  alunos.forEach(a=>{prepDados[a.id]={aluno:a,situacao:'normal',motivo:''};});
+
+  renderPrepLista(alunos);
+  document.getElementById('prep-footer').style.display='flex';
+  atualizarPrepCount();
+}
+
+function renderPrepLista(alunos){
+  const el=document.getElementById('prep-lista');
+  const MOTIVOS=['2_horario','saude','esqueceu','folha_inadequada','nao_informou','desorganizacao','viagem','outro'];
+  const MOTIVOS_LABEL={'2_horario':'2º horário','saude':'Saúde','esqueceu':'Esqueceu','folha_inadequada':'Folha inadequada','nao_informou':'Não informou','desorganizacao':'Desorganização','viagem':'Viagem','outro':'Outro'};
+
+  let html='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">';
+  html+='<div style="display:grid;grid-template-columns:40px 1fr 200px 220px;gap:0;padding:10px 16px;background:var(--surface2);border-bottom:1px solid var(--border)">';
+  html+='<span style="font-size:12px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px">#</span>';
+  html+='<span style="font-size:12px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px">Aluno</span>';
+  html+='<span style="font-size:12px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px">Situação</span>';
+  html+='<span style="font-size:12px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px">Motivo</span>';
+  html+='</div>';
+
+  alunos.forEach(a=>{
+    html+=`<div style="display:grid;grid-template-columns:40px 1fr 200px 220px;gap:0;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center" id="prep-row-${a.id}">
+      <span style="font-size:13px;color:var(--ink3)">${a.numero||''}</span>
+      <span style="font-size:14px;font-weight:500">${a.nome}</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
+          <input type="radio" name="sit-${a.id}" value="normal" checked onchange="setPrepSit('${a.id}','normal')"/> Normal
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
+          <input type="radio" name="sit-${a.id}" value="zerada" onchange="setPrepSit('${a.id}','zerada')"/> Zerada
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
+          <input type="radio" name="sit-${a.id}" value="nao_entregou" onchange="setPrepSit('${a.id}','nao_entregou')"/> Não entregou
+        </label>
+      </div>
+      <select id="motivo-${a.id}" onchange="setPrepMotivo('${a.id}',this.value)"
+        style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;background:var(--surface);color:var(--ink);outline:none;opacity:0.4;pointer-events:none">
+        <option value="">Motivo...</option>
+        ${MOTIVOS.map(m=>`<option value="${m}">${MOTIVOS_LABEL[m]}</option>`).join('')}
+      </select>
+    </div>`;
+  });
+
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function setPrepSit(id,sit){
+  prepDados[id].situacao=sit;
+  const motivoEl=document.getElementById('motivo-'+id);
+  if(sit==='nao_entregou'){
+    motivoEl.style.opacity='1';motivoEl.style.pointerEvents='auto';
+  }else{
+    motivoEl.style.opacity='0.4';motivoEl.style.pointerEvents='none';
+    motivoEl.value='';prepDados[id].motivo='';
+  }
+  atualizarPrepCount();
+}
+
+function setPrepMotivo(id,motivo){prepDados[id].motivo=motivo;}
+
+function atualizarPrepCount(){
+  const vals=Object.values(prepDados);
+  const normais=vals.filter(v=>v.situacao!=='nao_entregou').length;
+  const fora=vals.filter(v=>v.situacao==='nao_entregou').length;
+  document.getElementById('prep-count-normal').textContent=normais;
+  document.getElementById('prep-count-fora').textContent=fora;
+}
+
+async function salvarPreparacao(){
+  const serie=document.getElementById('prep-serie').value;
+  const turma=document.getElementById('prep-turma').value;
+  const proposta=document.querySelector('input[name="prep-prop"]:checked')?.value;
+  const versao=document.querySelector('input[name="prep-versao"]:checked')?.value;
+  if(!serie||!turma||!proposta||!versao){toast('Selecione todos os campos','error');return;}
+
+  // Salva na tabela preparacoes
+  const itens=Object.entries(prepDados).map(([aluno_id,d])=>({
+    aluno_id, serie, turma, proposta, versao:parseInt(versao),
+    situacao:d.situacao, motivo_atraso:d.motivo||null
+  }));
+
+  // Upsert por aluno+proposta+versao
+  for(const item of itens){
+    await db.from('preparacoes').upsert(item,{onConflict:'aluno_id,proposta,versao'});
+  }
+
+  toast(`Preparação salva! ${itens.filter(i=>i.situacao!=='nao_entregou').length} alunos para correção.`,'success');
+}
+
+async function salvarNomeAvulso(notaId,nome){
+  await db.from('notas_redacao').update({nome_avulso:nome}).eq('id',notaId);
+}
+
 let motivoZeroTarget=null;
 function abrirMotivoZero(notaId){
   motivoZeroTarget=notaId;
