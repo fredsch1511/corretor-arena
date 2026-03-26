@@ -129,10 +129,13 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
 <style>
 #screen-login {
   align-items:center; justify-content:center;
-  background:var(--login-bg);
+  background:#FDF1EC;
+  min-height:100vh;
+}
+[data-theme="dark"] #screen-login {
+  background:#0A0908;
   background-image:radial-gradient(circle at 20% 50%,rgba(42,35,32,0.8) 0%,transparent 60%),
                    radial-gradient(circle at 80% 20%,rgba(26,42,26,0.4) 0%,transparent 50%);
-  min-height:100vh;
 }
 .login-wrap {
   width:100%; max-width:560px; padding:20px;
@@ -146,9 +149,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
 }
 .login-title {
   font-family:'Syne',sans-serif; font-size:clamp(32px,6vw,52px);
-  font-weight:800; color:#fff; letter-spacing:-1.5px;
+  font-weight:800; color:#D4541E; letter-spacing:-1.5px;
   line-height:1.1; text-align:center; margin-bottom:40px;
 }
+[data-theme="dark"] .login-title { color:#fff; }
 .login-cards {
   display:grid; grid-template-columns:1fr 1fr; gap:14px; width:100%;
 }
@@ -166,17 +170,30 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
   border-radius:16px; padding:24px 20px; min-height:180px;
 }
 .flip-front {
+  background:#FFFFFF;
+  border:1px solid #EDE8E2;
+  box-shadow:0 2px 12px rgba(0,0,0,0.06);
+}
+.flip-front.coord-front {
+  background:#FFF8F5;
+  border:1px solid #F5C4A8;
+}
+.flip-back {
+  background:#FFF8F5;
+  border:1px solid #F5C4A8;
+  transform:rotateY(180deg);
+}
+[data-theme="dark"] .flip-front {
   background:rgba(255,255,255,0.06);
   border:1px solid rgba(255,255,255,0.12);
 }
-.flip-front.coord-front {
+[data-theme="dark"] .flip-front.coord-front {
   background:rgba(212,84,30,0.10);
   border:1px solid rgba(212,84,30,0.25);
 }
-.flip-back {
+[data-theme="dark"] .flip-back {
   background:rgba(255,255,255,0.09);
   border:1px solid rgba(212,84,30,0.4);
-  transform:rotateY(180deg);
 }
 .fi-icon {
   width:42px; height:42px; border-radius:10px;
@@ -187,26 +204,38 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
 .fi-coord { background:rgba(212,84,30,0.3); border:1px solid rgba(212,84,30,0.5); }
 .fi-title {
   font-family:'Syne',sans-serif; font-size:15px; font-weight:700;
-  color:#fff; margin-bottom:6px;
+  color:#1A1410; margin-bottom:6px;
 }
-.fi-desc { font-size:12px; color:rgba(255,255,255,0.4); line-height:1.5; }
+.fi-desc { font-size:12px; color:#6B5F58; line-height:1.5; }
 .fi-cta {
   margin-top:16px; font-size:12px; font-weight:600;
-  color:rgba(255,255,255,0.35); display:flex; align-items:center; gap:4px;
+  color:#D4541E; display:flex; align-items:center; gap:4px;
 }
+[data-theme="dark"] .fi-title { color:#fff; }
+[data-theme="dark"] .fi-desc { color:rgba(255,255,255,0.4); }
+[data-theme="dark"] .fi-cta { color:rgba(255,255,255,0.35); }
 .fb-label {
   font-size:10px; font-weight:600; color:rgba(255,255,255,0.4);
   text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;
 }
 .fb-input {
   width:100%; padding:9px 12px;
-  background:rgba(255,255,255,0.08);
-  border:1px solid rgba(255,255,255,0.15);
-  border-radius:8px; color:#fff; font-family:inherit;
+  background:#fff;
+  border:1px solid #EDE8E2;
+  border-radius:8px; color:#1A1410; font-family:inherit;
   font-size:13px; outline:none; margin-bottom:10px;
   transition:border-color .2s;
 }
-.fb-input:focus { border-color:rgba(212,84,30,0.7); }
+.fb-input:focus { border-color:#D4541E; }
+.fb-label { color:#6B5F58 !important; }
+.fb-volta { color:#A09288 !important; }
+[data-theme="dark"] .fb-input {
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.15);
+  color:#fff;
+}
+[data-theme="dark"] .fb-label { color:rgba(255,255,255,0.4) !important; }
+[data-theme="dark"] .fb-volta { color:rgba(255,255,255,0.3) !important; }
 .fb-btn {
   width:100%; padding:10px; background:#D4541E;
   border:none; border-radius:8px; color:#fff;
@@ -227,10 +256,15 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
 }
 .login-theme-btn {
   position:absolute; top:20px; right:20px;
+  background:#fff;
+  border:1px solid #EDE8E2;
+  border-radius:8px; padding:6px 10px;
+  cursor:pointer; font-size:15px; color:#6B5F58;
+}
+[data-theme="dark"] .login-theme-btn {
   background:rgba(255,255,255,0.08);
   border:1px solid rgba(255,255,255,0.12);
-  border-radius:8px; padding:6px 10px;
-  cursor:pointer; font-size:15px; color:rgba(255,255,255,0.5);
+  color:rgba(255,255,255,0.5);
 }
 </style>
 
@@ -389,13 +423,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
     
     <div class="page-title">Painel do Coordenador</div>
     <p class="page-sub" id="coord-sub">Bem-vindo!</p>
-    <div class="tabs">
-      <button class="tab active" onclick="showTab('tab-pacotes')">Pacotes</button>
-      <button class="tab" onclick="showTab('tab-prep')">Preparação</button>
-      <button class="tab" onclick="showTab('tab-notas')">Notas</button>
-      <button class="tab" onclick="showTab('tab-corretores')">Corretores</button>
-      <button class="tab" onclick="showTab('tab-alunos')">Alunos</button>
-    </div>
+
     <div id="tab-pacotes">
       <div class="stats-row">
         <div class="stat-card"><div class="stat-label">Em andamento</div><div class="stat-value" style="color:var(--accent)" id="stat-andamento">—</div></div>
@@ -505,8 +533,26 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
 <div id="tab-config" style="display:none">
   <div style="max-width:640px">
     <p style="font-size:13px;color:var(--ink2);margin-bottom:24px;line-height:1.6">
-      Defina o tema e o gênero de cada proposta por bimestre. Essas informações aparecem nos pacotes e orientam os corretores.
+      Defina o tema e o gênero de cada proposta por série e bimestre.
     </p>
+
+    <!-- Seletor de série -->
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Série</label>
+      <div style="display:flex;gap:8px" id="cfg-serie-sel">
+        <button onclick="setConfigSerie('6º Ano')" data-cserie="6º Ano" class="cfg-serie-btn"
+          style="padding:8px 16px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s">6º Ano</button>
+        <button onclick="setConfigSerie('7º Ano')" data-cserie="7º Ano" class="cfg-serie-btn"
+          style="padding:8px 16px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s">7º Ano</button>
+        <button onclick="setConfigSerie('8º Ano')" data-cserie="8º Ano" class="cfg-serie-btn"
+          style="padding:8px 16px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s">8º Ano</button>
+        <button onclick="setConfigSerie('9º Ano')" data-cserie="9º Ano" class="cfg-serie-btn"
+          style="padding:8px 16px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s">9º Ano</button>
+      </div>
+    </div>
+
+    <!-- Campos (ocultos até série ser selecionada) -->
+    <div id="cfg-campos" style="display:none">
 
     <!-- Seletor de bimestre -->
     <div style="display:flex;gap:8px;margin-bottom:24px" id="cfg-bim-sel">
@@ -593,8 +639,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
 
     </div>
 
+    </div><!-- fim cfg-campos -->
+
     <!-- Botão salvar -->
-    <div style="display:flex;align-items:center;justify-content:space-between">
+    <div id="cfg-save-wrap" style="display:none;align-items:center;justify-content:space-between">
       <div id="cfg-save-msg" style="font-size:13px;color:var(--green);display:none">✓ Salvo com sucesso!</div>
       <div style="flex:1"></div>
       <button class="btn btn-primary" onclick="salvarConfiguracoes()">Salvar configurações</button>
@@ -660,7 +708,8 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
     <div class="topbar-spacer"></div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
       <span class="topbar-user" id="corretor-user-name"></span>
-      <span id="corretor-valor-topbar" style="font-size:12px;color:var(--accent);font-weight:600;font-family:'Syne',sans-serif"></span>
+      <span id="corretor-periodo-topbar" style="font-size:11px;color:var(--ink3)"></span>
+      <span id="corretor-valor-topbar" style="font-size:13px;color:var(--accent);font-weight:700;font-family:'Syne',sans-serif"></span>
     </div>
     <button class="btn-ghost" onclick="toggleTheme()" id="theme-btn-corr" title="Alternar tema" style="font-size:16px;padding:7px 10px">☀️</button>
     <button class="btn-ghost" onclick="doLogout()">Sair</button>
@@ -1563,7 +1612,9 @@ async function loadPacotesCorretor(){
 
   // Atualiza topbar
   const topbarVal=document.getElementById('corretor-valor-topbar');
-  if(topbarVal)topbarVal.textContent=`${labelPeriodo}: R$ ${valorPeriodo.toFixed(2).replace('.',',')} · Total: R$ ${valorTotal.toFixed(2).replace('.',',')}`;
+  const topbarPer=document.getElementById('corretor-periodo-topbar');
+  if(topbarPer)topbarPer.textContent=labelPeriodo;
+  if(topbarVal)topbarVal.textContent='R$ '+valorPeriodo.toFixed(2).replace('.',',')+' · Total R$ '+valorTotal.toFixed(2).replace('.',',');
 
   const disponiveis=pacotes.filter(p=>p.status==='aberto');
   const entregues=pacotes.filter(p=>p.status==='enviado'||p.status==='concluido');
@@ -1637,21 +1688,53 @@ async function renderCardPacote(p, soLeitura){
 
     // Linha avulsa (atrasada sem aluno vinculado)
     if(!n.alunos){
-      alunosHTML+=`<div class="aluno-row" style="flex-direction:column;gap:8px">
-        <div style="display:flex;align-items:center;gap:12px;width:100%">
+      const propAtual = n.proposta || '';
+      const verAtual = n.versao || '';
+      const nomeAtual = n.nome_avulso || '';
+      if(soLeitura||enviado){
+        // Modo leitura
+        alunosHTML+=`<div class="aluno-row">
           <div class="aluno-num">${idx+1}</div>
-          <input type="text" placeholder="Nome do aluno" value="${n.nome_avulso||''}"
-            style="flex:1;padding:7px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;background:var(--surface);color:var(--ink);outline:none"
-            onchange="salvarNomeAvulso('${n.id}',this.value)" ${soLeitura||enviado?'disabled':''}/>
-          ${soLeitura||enviado
-            ?`<span style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:${n.nota!==null?'var(--ink)':'var(--ink3)'}">${n.nota!==null?Number(n.nota).toFixed(1):'—'}</span>`
-            :`<input class="nota-input ${n.nota!==null?'nota-saved':''}" type="number" min="0" max="10" step="0.5" placeholder="nota"
-              value="${n.nota!==null?Number(n.nota).toFixed(1):''}"
-              data-id="${n.id}" data-pacote="${p.id}" data-valor="${p.valor_por_redacao||5}"
-              onchange="salvarNota(this)" style="width:72px"/>`
-          }
-        </div>
-      </div>`;
+          <div class="aluno-nome">${nomeAtual||'(sem nome)'} ${propAtual?`<span style="font-size:11px;background:var(--blue-bg);color:var(--blue);padding:1px 7px;border-radius:10px;margin-left:6px">${propAtual} ${verAtual}ªv</span>`:''}</div>
+          <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:${n.nota!==null?'var(--ink)':'var(--ink3)'}">${n.nota!==null?Number(n.nota).toFixed(1):'—'}</span>
+        </div>`;
+      } else {
+        // Modo edição — busca nome + proposta + versão
+        alunosHTML+=`<div style="padding:12px 16px;border-bottom:1px solid var(--border);background:${nomeAtual?'var(--surface)':'#FFFBF8'}">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:${nomeAtual?'0':'8px'}">
+            <div class="aluno-num">${idx+1}</div>
+            ${nomeAtual
+              ? `<div style="flex:1">
+                  <div style="font-size:14px;font-weight:500">${nomeAtual}</div>
+                  <div style="font-size:11px;color:var(--ink3)">${propAtual} ${verAtual?verAtual+'ªv':''}</div>
+                </div>
+                <input class="nota-input ${n.nota!==null?'nota-saved':''}" type="number" min="0" max="10" step="0.5" placeholder="nota"
+                  value="${n.nota!==null?Number(n.nota).toFixed(1):''}"
+                  data-id="${n.id}" data-pacote="${p.id}" data-valor="${p.valor_por_redacao||5}"
+                  onchange="salvarNota(this)" style="width:72px"/>
+                <button onclick="limparAvulso('${n.id}')" style="padding:4px 8px;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--ink3)">✕</button>`
+              : `<div style="flex:1;font-size:13px;color:var(--ink3)">Preencha os dados desta redação</div>`
+            }
+          </div>
+          ${!nomeAtual ? `
+          <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center">
+            <input type="text" placeholder="Buscar nome do aluno..." id="avulso-busca-${n.id}"
+              oninput="buscarAvulso('${n.id}','${p.serie||''}',this.value)"
+              style="padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;background:var(--surface);color:var(--ink);outline:none"
+              onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
+            <select id="avulso-prop-${n.id}" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;background:var(--surface);color:var(--ink);outline:none">
+              <option value="">Proposta</option>
+              <option value="P1">P1</option><option value="P2">P2</option><option value="P3">P3</option>
+            </select>
+            <select id="avulso-ver-${n.id}" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;background:var(--surface);color:var(--ink);outline:none">
+              <option value="">Versão</option>
+              <option value="1">1ª</option><option value="2">2ª</option>
+            </select>
+          </div>
+          <div id="avulso-result-${n.id}" style="margin-top:6px"></div>
+          ` : ''}
+        </div>`;
+      }
       continue;
     }
 
@@ -2096,8 +2179,47 @@ async function salvarPreparacao(){
   toast(`Preparação salva! ${itens.filter(i=>i.situacao!=='nao_entregou').length} alunos para correção.`,'success');
 }
 
-async function salvarNomeAvulso(notaId,nome){
-  await db.from('notas_redacao').update({nome_avulso:nome}).eq('id',notaId);
+async function salvarNomeAvulso(notaId, nome, proposta, versao){
+  const update = {nome_avulso: nome};
+  if(proposta) update.proposta = proposta;
+  if(versao) update.versao = parseInt(versao);
+  await db.from('notas_redacao').update(update).eq('id', notaId);
+}
+
+let avulsoTimer = {};
+function buscarAvulso(notaId, serie, termo){
+  clearTimeout(avulsoTimer[notaId]);
+  const res = document.getElementById('avulso-result-'+notaId);
+  if(!termo||termo.length<2){if(res)res.innerHTML='';return;}
+  avulsoTimer[notaId] = setTimeout(async()=>{
+    let q = db.from('alunos').select('id,nome,serie,turma').ilike('nome','%'+termo+'%').order('nome').limit(6);
+    if(serie) q = q.eq('serie', serie);
+    const {data} = await q;
+    if(!data||!data.length){if(res)res.innerHTML='<div style="font-size:12px;color:var(--ink3);padding:4px 0">Nenhum aluno encontrado</div>';return;}
+    if(res) res.innerHTML = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+      ${data.map(a=>`<div onclick="selecionarAvulso('${notaId}','${a.nome.replace(/'/g,"\'")}','${a.serie}','${a.turma}')"
+        style="padding:7px 12px;font-size:13px;cursor:pointer;border-bottom:0.5px solid var(--border)"
+        onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <strong>${a.nome}</strong> <span style="font-size:11px;color:var(--ink3)">${a.serie} ${a.turma}</span>
+      </div>`).join('')}
+    </div>`;
+  }, 250);
+}
+
+async function selecionarAvulso(notaId, nome, serie, turma){
+  const propEl = document.getElementById('avulso-prop-'+notaId);
+  const verEl = document.getElementById('avulso-ver-'+notaId);
+  const prop = propEl?.value || '';
+  const ver = verEl?.value || '';
+  if(!prop || !ver){ toast('Selecione proposta e versão antes de confirmar','error'); return; }
+  await salvarNomeAvulso(notaId, nome, prop, ver);
+  toast(nome+' adicionado! ✓','success');
+  loadPacotesCorretor();
+}
+
+async function limparAvulso(notaId){
+  await db.from('notas_redacao').update({nome_avulso:null,nota:null,proposta:null,versao:null}).eq('id',notaId);
+  loadPacotesCorretor();
 }
 
 // BIMESTRE GLOBAL
@@ -2295,7 +2417,23 @@ async function salvarMotivoZero(){
 }
 // CONFIGURAÇÕES
 let configBimAtual = 1;
-let configCache = {}; // {bim: {p1_tema, p1_genero, p2_tema, p2_genero, p3_tema, p3_genero}}
+let configSerieAtual = null;
+let configCache = {}; // {serie_bim: {...}}
+
+function setConfigSerie(serie){
+  configSerieAtual = serie;
+  document.querySelectorAll('.cfg-serie-btn').forEach(btn=>{
+    const active = btn.dataset.cserie === serie;
+    btn.style.background = active ? 'var(--accent)' : 'var(--surface)';
+    btn.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    btn.style.color = active ? '#fff' : 'var(--ink2)';
+  });
+  const campos = document.getElementById('cfg-campos');
+  const saveWrap = document.getElementById('cfg-save-wrap');
+  if(campos) campos.style.display = 'block';
+  if(saveWrap) saveWrap.style.display = 'flex';
+  loadConfiguracoesBim(configBimAtual);
+}
 
 function setConfigBim(bim){
   configBimAtual = bim;
@@ -2317,19 +2455,21 @@ async function loadConfiguracoes(){
 
 async function loadConfiguracoesBim(bim){
   // Verifica cache
-  if(configCache[bim]){
-    preencherCamposConfig(configCache[bim]);
+  if(!configSerieAtual) return;
+  const cacheKey = configSerieAtual+'_'+bim;
+  if(configCache[cacheKey]){
+    preencherCamposConfig(configCache[cacheKey]);
     return;
   }
   const {data} = await db.from('configuracoes_propostas')
-    .select('*').eq('bimestre', bim);
+    .select('*').eq('bimestre', bim).eq('serie', configSerieAtual);
   const cfg = {};
   (data||[]).forEach(row => {
     const p = row.proposta.toLowerCase(); // 'p1','p2','p3'
     cfg[p+'_tema'] = row.tema || '';
     cfg[p+'_genero'] = row.genero || '';
   });
-  configCache[bim] = cfg;
+  configCache[configSerieAtual+'_'+bim] = cfg;
   preencherCamposConfig(cfg);
 }
 
@@ -2345,6 +2485,7 @@ function preencherCamposConfig(cfg){
 }
 
 async function salvarConfiguracoes(){
+  if(!configSerieAtual){ toast('Selecione uma série primeiro','error'); return; }
   const bim = configBimAtual;
   const propostas = ['P1','P2','P3'];
   const msgEl = document.getElementById('cfg-save-msg');
@@ -2355,13 +2496,13 @@ async function salvarConfiguracoes(){
     const tema = document.getElementById('cfg-'+p+'-tema')?.value.trim() || '';
     const genero = document.getElementById('cfg-'+p+'-genero')?.value.trim() || '';
     await db.from('configuracoes_propostas').upsert(
-      {bimestre: bim, proposta: prop, tema, genero},
-      {onConflict: 'bimestre,proposta'}
+      {bimestre: bim, serie: configSerieAtual, proposta: prop, tema, genero},
+      {onConflict: 'bimestre,serie,proposta'}
     );
-    // Atualiza cache
-    if(!configCache[bim]) configCache[bim] = {};
-    configCache[bim][p+'_tema'] = tema;
-    configCache[bim][p+'_genero'] = genero;
+    const ck = configSerieAtual+'_'+bim;
+    if(!configCache[ck]) configCache[ck] = {};
+    configCache[ck][p+'_tema'] = tema;
+    configCache[ck][p+'_genero'] = genero;
   }
 
   if(msgEl){ msgEl.style.display='block'; setTimeout(()=>msgEl.style.display='none', 3000); }
@@ -2369,10 +2510,19 @@ async function salvarConfiguracoes(){
 }
 
 // Expõe temas das propostas para uso nos pacotes
-async function getTemaPropostas(bim){
-  if(configCache[bim]) return configCache[bim];
-  await loadConfiguracoesBim(bim);
-  return configCache[bim] || {};
+async function getTemaPropostas(bim, serie){
+  const ck = (serie||'')+'_'+bim;
+  if(configCache[ck]) return configCache[ck];
+  if(!serie) return {};
+  const {data} = await db.from('configuracoes_propostas').select('*').eq('bimestre',bim).eq('serie',serie);
+  const cfg = {};
+  (data||[]).forEach(row=>{
+    const p=row.proposta.toLowerCase();
+    cfg[p+'_tema']=row.tema||'';
+    cfg[p+'_genero']=row.genero||'';
+  });
+  configCache[ck] = cfg;
+  return cfg;
 }
 
 // ETIQUETAS
