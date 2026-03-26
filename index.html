@@ -1954,14 +1954,21 @@ async function loadPacotesCorretor(){
     return;
   }
 
-  // Calcula valores
+  // Calcula valores — busca todas as notas de uma vez
+  const pacoteIds=pacotes.map(p=>p.id);
+  let todasNotas=[];
+  if(pacoteIds.length){
+    const {data:ns}=await db.from('notas_redacao')
+      .select('pacote_id,nota,situacao')
+      .in('pacote_id',pacoteIds);
+    todasNotas=ns||[];
+  }
   let valorPeriodo=0, valorTotal=0;
   for(const p of pacotes){
-    const {data:ns}=await db.from('notas_redacao').select('nota,situacao,updated_at').eq('pacote_id',p.id);
-    const feitas=(ns||[]).filter(n=>(n.nota!==null)||n.situacao==='zerada').length;
-    const val=feitas*(p.valor_por_redacao||5);
+    const ns=todasNotas.filter(n=>n.pacote_id===p.id);
+    const feitas=ns.filter(n=>(n.nota!==null)||n.situacao==='zerada').length;
+    const val=feitas*(p.valor_por_redacao||6);
     valorTotal+=val;
-    // Verifica se pacote está no período
     const criado=new Date(p.created_at);
     if(criado>=periodoInicio&&criado<=periodoFim)valorPeriodo+=val;
   }
