@@ -283,7 +283,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
           <div class="fi-desc">Acesse seus pacotes e lance as notas</div>
           <div class="fi-cta">Entrar →</div>
         </div>
-        <div class="flip-back" onclick="event.stopPropagation()">
+        <div class="flip-back" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
           <label class="fb-label">Corretor</label>
           <input class="fb-input" id="lu-corretor" placeholder="Usuário" autocomplete="username"
             onkeydown="if(event.key==='Enter')doLoginFlip('corretor')"/>
@@ -305,7 +305,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
           <div class="fi-desc">Gerencie pacotes, corretores e notas</div>
           <div class="fi-cta">Entrar →</div>
         </div>
-        <div class="flip-back" onclick="event.stopPropagation()">
+        <div class="flip-back" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
           <label class="fb-label">Coordenação</label>
           <input class="fb-input" id="lu-coordenador" placeholder="Usuário" autocomplete="username"
             onkeydown="if(event.key==='Enter')doLoginFlip('coordenador')"/>
@@ -987,15 +987,21 @@ const MOTIVOS={
 
 // AUTH
 function flipLogin(tipo){
+  const card = document.getElementById('flip-'+tipo);
+  // Só faz flip se ainda está na frente
+  if(card.classList.contains('flipped')) return;
   const other={'corretor':'coordenador','coordenador':'corretor'}[tipo];
-  document.getElementById('flip-'+tipo).classList.add('flipped');
-  // Fecha o outro se estiver aberto
   document.getElementById('flip-'+other).classList.remove('flipped');
-  setTimeout(()=>document.getElementById('lu-'+tipo).focus(),300);
+  card.classList.add('flipped');
+  setTimeout(()=>{
+    const inp = document.getElementById('lu-'+tipo);
+    if(inp) inp.focus();
+  },350);
 }
 function flipBack(tipo){
   document.getElementById('flip-'+tipo).classList.remove('flipped');
-  document.getElementById('err-'+tipo).style.display='none';
+  const err = document.getElementById('err-'+tipo);
+  if(err) err.style.display='none';
 }
 
 
@@ -1592,13 +1598,23 @@ async function salvarSituacao(){
 async function loadPacotesCorretor(){
   const el=document.getElementById('corretor-content');
 
-  // Calcula período: dia 24 do mês anterior até dia 23 do mês atual
+  // Calcula período: se hoje >= dia 24, período é dia 24 deste mês até 23 do próximo
+  // se hoje < dia 24, período é dia 24 do mês anterior até 23 deste mês
   const hoje=new Date();
   const anoAtual=hoje.getFullYear();
   const mesAtual=hoje.getMonth();
-  const periodoInicio=new Date(anoAtual,mesAtual-1,24);
-  const periodoFim=new Date(anoAtual,mesAtual,23,23,59,59);
-  const fmtData=d=>d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+  const diaAtual=hoje.getDate();
+  let periodoInicio, periodoFim;
+  if(diaAtual >= 24){
+    // Estamos após o dia 24 — período começa no dia 24 deste mês
+    periodoInicio=new Date(anoAtual,mesAtual,24);
+    periodoFim=new Date(anoAtual,mesAtual+1,23,23,59,59);
+  } else {
+    // Estamos antes do dia 24 — período começou no dia 24 do mês anterior
+    periodoInicio=new Date(anoAtual,mesAtual-1,24);
+    periodoFim=new Date(anoAtual,mesAtual,23,23,59,59);
+  }
+  const fmtData=d=>d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}).replace('.','');
   const labelPeriodo=`${fmtData(periodoInicio)} – ${fmtData(periodoFim)}`;
 
   // Busca TODOS os pacotes do corretor
