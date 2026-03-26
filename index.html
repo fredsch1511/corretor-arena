@@ -283,8 +283,11 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
             <span id="prep-count-normal" style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--green)">0</span>
             <span style="font-size:14px;color:var(--ink2);margin-left:4px">para correção</span>
             <span style="margin:0 12px;color:var(--border)">·</span>
+            <span id="prep-count-atraso" style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--yellow)">0</span>
+            <span style="font-size:14px;color:var(--ink2);margin-left:4px">com atraso</span>
+            <span style="margin:0 12px;color:var(--border)">·</span>
             <span id="prep-count-fora" style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--red)">0</span>
-            <span style="font-size:14px;color:var(--ink2);margin-left:4px">fora do envelope</span>
+            <span style="font-size:14px;color:var(--ink2);margin-left:4px">não entregou</span>
           </div>
           <button class="btn btn-primary btn-sm" onclick="salvarPreparacao()">Salvar Preparação</button>
         </div>
@@ -300,13 +303,23 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
     </div>
     <div id="tab-alunos" style="display:none">
       <div class="section-header">
-        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600">Alunos</div>
-        <div class="filter-row">
-          <select id="f-aluno-serie" onchange="loadAlunosFiltro()"><option value="">Todas as séries</option><option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option></select>
-          <select id="f-aluno-turma" onchange="loadAlunosFiltro()"><option value="">Todas as turmas</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>H</option></select>
-        </div>
+        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:600">Busca de Alunos</div>
       </div>
-      <div id="lista-alunos" class="table-wrap"><div class="loading"><div class="spinner"></div></div></div>
+      <!-- Busca por nome -->
+      <div style="position:relative;margin-bottom:20px">
+        <input type="text" id="aluno-busca"
+          placeholder="Digite o nome do aluno..."
+          oninput="buscarAluno(this.value)"
+          style="width:100%;padding:14px 18px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:16px;background:var(--surface);color:var(--ink);outline:none;transition:border-color .2s"
+          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
+        <span style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:18px;opacity:.4">🔍</span>
+      </div>
+      <div id="aluno-resultado"></div>
+      <!-- Grid de turmas -->
+      <div style="margin-top:28px">
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:600;color:var(--ink2);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px">Visão geral por turma</div>
+        <div id="alunos-grid-turmas" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -400,6 +413,30 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
       </div>
     </div>
 
+    <!-- EXTRA -->
+    <div id="pk-extra-wrap" style="display:none">
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="field full">
+          <label>Descrição do pacote extra</label>
+          <input type="text" id="pk-extra-desc" placeholder="Ex: Redações do reforço, prova substitutiva..." style="margin-top:6px"/>
+        </div>
+        <div class="field">
+          <label>Quantidade de itens</label>
+          <input type="number" id="pk-extra-qtd" min="1" placeholder="ex: 10" style="margin-top:6px" onchange="calcExtraTotal()"/>
+        </div>
+        <div class="field">
+          <label>Valor unitário (R$)</label>
+          <input type="number" id="pk-extra-valor-unit" value="6" min="0" step="0.5" style="margin-top:6px" onchange="calcExtraTotal()"/>
+        </div>
+        <div class="field full">
+          <div style="background:var(--accent-bg);border:1px solid #F5C4A8;border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:14px;color:var(--ink2)">Total do pacote extra</span>
+            <span id="pk-extra-total" style="font-family:'Syne',sans-serif;font-weight:700;font-size:20px;color:var(--accent)">R$ 0,00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- DATAS -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div class="field"><label>Data de retirada</label><input type="date" id="pk-data-retirada" style="margin-top:6px"/></div>
@@ -408,7 +445,7 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
     <!-- CORRETOR E VALOR -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div class="field"><label>Corretor</label><select id="pk-corretor"><option value="">Carregando...</option></select></div>
-      <div class="field"><label>Valor por redação (R$)</label><input type="number" id="pk-valor" value="5" min="0" step="0.5"/></div>
+      <div class="field"><label>Valor por redação (R$)</label><input type="number" id="pk-valor" value="6" min="0" step="0.5"/></div>
     </div>
 
     <div id="pk-err" class="err-msg"></div>
@@ -665,58 +702,175 @@ async function excluirPacote(id){if(!confirm('Excluir pacote e todas as notas? I
 async function loadNotasTurma(){
   const serie=document.getElementById('f-serie').value;
   const turma=document.getElementById('f-turma').value;
-  const proposta=document.getElementById('f-proposta').value;
-  const versao=document.getElementById('f-versao').value;
   const el=document.getElementById('tabela-notas');
-  if(!serie&&!turma){el.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Selecione ao menos uma série</div></div>';return;}
-  el.innerHTML='<div class="loading"><div class="spinner"></div> Carregando...</div>';
-  const {data}=await db.from('notas_redacao').select('id,nota,situacao,motivo_atraso,proposta,versao,alunos(nome,numero,turma,serie),pacotes(proposta,versao,tipo)');
-  const sitLabels={normal:'',zerada:'<span class="badge badge-yellow">Zerada</span>',nao_entregue:'<span class="badge badge-red">Não entregue</span>'};
-  const f=(data||[]).filter(n=>{
-    if(!n.alunos)return false;
-    if(serie&&n.alunos.serie!==serie)return false;
-    if(turma&&n.alunos.turma!==turma)return false;
+  const resumoEl=document.getElementById('notas-resumo');
+  const statsEl=document.getElementById('notas-stats');
+
+  if(!serie||!turma){
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Selecione série e turma</div></div>';
+    if(resumoEl)resumoEl.style.display='none';
+    return;
+  }
+  el.innerHTML='<div class="loading"><div class="spinner"></div> Carregando boletim...</div>';
+
+  const {data:alunos}=await db.from('alunos').select('id,nome,numero').eq('serie',serie).eq('turma',turma).order('numero');
+  if(!alunos||!alunos.length){el.innerHTML='<div class="empty-state"><div class="empty-title">Nenhum aluno encontrado</div></div>';return;}
+
+  const ids=alunos.map(a=>a.id);
+  const {data:hist}=await db.from('notas_historicas').select('aluno_id,proposta,versao,nota').in('aluno_id',ids);
+  const {data:pacNotas}=await db.from('notas_redacao').select('aluno_id,nota,situacao,proposta,versao,pacotes(proposta,versao)').in('aluno_id',ids).not('aluno_id','is',null);
+
+  const COLUNAS=[
+    {prop:'P1',ver:1,label:'P1·1ª'},{prop:'P1',ver:2,label:'P1·2ª'},
+    {prop:'P2',ver:1,label:'P2·1ª'},{prop:'P2',ver:2,label:'P2·2ª'},
+    {prop:'P3',ver:1,label:'P3·1ª'},{prop:'P3',ver:2,label:'P3·2ª'},
+  ];
+
+  const notasMap={};
+  alunos.forEach(a=>{notasMap[a.id]={};COLUNAS.forEach(c=>{notasMap[a.id][c.prop+'·'+c.ver]=null;});});
+  (hist||[]).forEach(n=>{const k=n.proposta+'·'+n.versao;if(notasMap[n.aluno_id]&&k in notasMap[n.aluno_id])notasMap[n.aluno_id][k]=n.nota;});
+  (pacNotas||[]).forEach(n=>{
+    if(!n.aluno_id)return;
     const prop=n.proposta||n.pacotes?.proposta;
     const ver=n.versao||n.pacotes?.versao;
-    if(proposta&&prop!==proposta)return false;
-    if(versao&&String(ver)!==versao)return false;
-    return true;
+    if(!prop||!ver)return;
+    const k=prop+'·'+ver;
+    if(notasMap[n.aluno_id]&&k in notasMap[n.aluno_id]&&n.nota!==null)notasMap[n.aluno_id][k]=n.nota;
   });
-  if(!f.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">Nenhuma nota encontrada</div></div>';return;}
-  let html='<table><thead><tr><th>#</th><th>Aluno</th><th>Turma</th><th>Proposta</th><th>Versão</th><th>Nota</th><th>Situação</th><th>Ações</th></tr></thead><tbody>';
-  f.forEach(n=>{
-    const prop=n.proposta||n.pacotes?.proposta||'—';
-    const ver=n.versao||n.pacotes?.versao;
-    const notaStr=n.nota!==null?`<strong style="font-family:'Syne',sans-serif;font-size:16px">${Number(n.nota).toFixed(1)}</strong>`:'<span style="color:var(--ink3)">—</span>';
-    const sit=n.situacao||'normal';
-    const motivo=n.motivo_atraso&&MOTIVOS[n.motivo_atraso]?' · '+MOTIVOS[n.motivo_atraso]:'';
-    html+=`<tr>
-      <td style="color:var(--ink3)">${n.alunos.numero||''}</td>
-      <td>${n.alunos.nome}</td>
-      <td><span class="badge badge-blue">${n.alunos.serie} ${n.alunos.turma}</span></td>
-      <td>${prop}</td><td>${ver?ver+'ª':'—'}</td>
-      <td>${notaStr}</td>
-      <td>${(sitLabels[sit]||'')+`<span style="font-size:11px;color:var(--ink3)">${motivo}</span>`}</td>
-      <td><button class="btn btn-sm btn-outline" onclick="openSituacao('${n.id}','${n.alunos.nome.replace(/'/g,"\\'")}','${sit}','${n.motivo_atraso||''}')">Situação</button></td>
+
+  function corNota(n){
+    if(n===null)return{bg:'var(--surface2)',color:'var(--ink3)',text:'—'};
+    if(n>=7)return{bg:'#EAF4EE',color:'#2D6A4F',text:n.toFixed(1).replace('.',',')};
+    if(n>=5)return{bg:'#FDF5E0',color:'#B5860D',text:n.toFixed(1).replace('.',',')};
+    return{bg:'#FDECEA',color:'#C0392B',text:n.toFixed(1).replace('.',',')};
+  }
+
+  let totalN=0,somaT=0,ac7=0,ab5=0;
+  alunos.forEach(a=>{COLUNAS.forEach(c=>{const n=notasMap[a.id][c.prop+'·'+c.ver];if(n!==null){totalN++;somaT+=n;if(n>=7)ac7++;if(n<5)ab5++;}});});
+  const mediaG=totalN>0?(somaT/totalN).toFixed(2).replace('.',','):'—';
+
+  if(statsEl){
+    statsEl.innerHTML=`
+      <div class="stat-card"><div class="stat-label">Alunos</div><div class="stat-value" style="color:var(--blue)">${alunos.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Média geral</div><div class="stat-value" style="color:var(--accent)">${mediaG}</div></div>
+      <div class="stat-card"><div class="stat-label">Acima de 7</div><div class="stat-value" style="color:var(--green)">${ac7}</div></div>
+      <div class="stat-card"><div class="stat-label">Abaixo de 5</div><div class="stat-value" style="color:var(--red)">${ab5}</div></div>`;
+    resumoEl.style.display='block';
+  }
+
+  let table=`<div style="overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface)">
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:var(--surface2)">
+      <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)">#</th>
+      <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);min-width:180px">Aluno</th>
+      ${COLUNAS.map(c=>`<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);white-space:nowrap">${c.label}</th>`).join('')}
+      <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);background:var(--accent-bg)">Média</th>
+    </tr></thead><tbody>`;
+
+  alunos.forEach(a=>{
+    const notas=COLUNAS.map(c=>notasMap[a.id][c.prop+'·'+c.ver]);
+    const vals=notas.filter(n=>n!==null);
+    const media=vals.length>0?vals.reduce((s,n)=>s+n,0)/6:null;
+    const mc=corNota(media);
+    table+=`<tr style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <td style="padding:10px 14px;color:var(--ink3)">${a.numero||''}</td>
+      <td style="padding:10px 14px;font-weight:500">${a.nome}</td>
+      ${COLUNAS.map((_,i)=>{const cor=corNota(notas[i]);return`<td style="padding:8px 14px;text-align:center"><span style="display:inline-block;min-width:36px;padding:4px 8px;border-radius:6px;background:${cor.bg};color:${cor.color};font-family:'Syne',sans-serif;font-weight:700;font-size:13px">${cor.text}</span></td>`;}).join('')}
+      <td style="padding:8px 14px;text-align:center;background:var(--accent-bg)">
+        <span style="display:inline-block;min-width:40px;padding:4px 8px;border-radius:6px;background:${mc.bg};color:${mc.color};font-family:'Syne',sans-serif;font-weight:700;font-size:14px">${media!==null?media.toFixed(2).replace('.',','):'—'}</span>
+      </td>
     </tr>`;
   });
-  el.innerHTML=html+'</tbody></table>';
+
+  const mediaCols=COLUNAS.map(c=>{const v=alunos.map(a=>notasMap[a.id][c.prop+'·'+c.ver]).filter(n=>n!==null);return v.length>0?v.reduce((s,n)=>s+n,0)/v.length:null;});
+  table+=`<tr style="background:var(--surface2);border-top:2px solid var(--border)">
+    <td style="padding:10px 14px"></td>
+    <td style="padding:10px 14px;font-family:'Syne',sans-serif;font-weight:600;font-size:12px;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px">Média da turma</td>
+    ${mediaCols.map(m=>{const cor=corNota(m);return`<td style="padding:8px 14px;text-align:center"><span style="display:inline-block;min-width:36px;padding:4px 8px;border-radius:6px;background:${cor.bg};color:${cor.color};font-family:'Syne',sans-serif;font-weight:700;font-size:13px">${m!==null?m.toFixed(1).replace('.',','):'—'}</span></td>`;}).join('')}
+    <td style="padding:8px 14px;text-align:center;background:var(--accent-bg)"><span style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--accent)">${mediaG}</span></td>
+  </tr>`;
+  table+=`</tbody></table></div>
+  <div style="display:flex;gap:16px;margin-top:12px;font-size:12px;color:var(--ink2);flex-wrap:wrap">
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:3px;background:#EAF4EE;display:inline-block"></span>≥ 7,0</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:3px;background:#FDF5E0;display:inline-block"></span>5,0 – 6,9</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:3px;background:#FDECEA;display:inline-block"></span>< 5,0</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:3px;background:var(--surface2);display:inline-block"></span>Sem nota</span>
+  </div>`;
+  el.innerHTML=table;
 }
 
-// ALUNOS
-async function loadAlunosFiltro(){
-  const serie=document.getElementById('f-aluno-serie').value;
-  const turma=document.getElementById('f-aluno-turma').value;
-  const el=document.getElementById('lista-alunos');
+
+let buscaTimer=null;
+function buscarAluno(termo){
+  clearTimeout(buscaTimer);
+  const el=document.getElementById('aluno-resultado');
+  if(!termo||termo.length<2){el.innerHTML='';return;}
   el.innerHTML='<div class="loading"><div class="spinner"></div></div>';
-  let q=db.from('alunos').select('*').order('serie').order('turma').order('numero');
-  if(serie)q=q.eq('serie',serie);
-  if(turma)q=q.eq('turma',turma);
-  const {data}=await q;
-  if(!data||!data.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum aluno encontrado</div></div>';return;}
-  let html='<table><thead><tr><th>#</th><th>Nome</th><th>Série</th><th>Turma</th></tr></thead><tbody>';
-  data.forEach(a=>{html+=`<tr><td style="color:var(--ink3)">${a.numero||''}</td><td>${a.nome}</td><td>${a.serie}</td><td><span class="badge badge-blue">${a.turma}</span></td></tr>`;});
-  el.innerHTML=html+'</tbody></table>';
+  buscaTimer=setTimeout(async()=>{
+    const {data}=await db.from('alunos').select('*').ilike('nome','%'+termo+'%').order('serie').order('turma').order('numero').limit(30);
+    if(!data||!data.length){el.innerHTML='<div style="font-size:14px;color:var(--ink3);padding:16px 0">Nenhum aluno encontrado</div>';return;}
+    let h=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">`;
+    data.forEach(a=>{
+      h+=`<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--blue-bg);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--blue);flex-shrink:0">${a.nome.split(' ').map(n=>n[0]).slice(0,2).join('')}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:500">${a.nome}</div>
+          <div style="font-size:12px;color:var(--ink3)">${a.serie} · Turma ${a.turma}</div>
+        </div>
+        <span class="badge badge-blue">${a.turma}</span>
+      </div>`;
+    });
+    h+='</div>';
+    if(data.length===30)h+=`<div style="font-size:12px;color:var(--ink3);padding:8px 0;text-align:center">Mostrando os primeiros 30 resultados</div>`;
+    el.innerHTML=h;
+  },300);
+}
+
+async function loadAlunosFiltro(){
+  // Carrega grid de turmas
+  const el=document.getElementById('alunos-grid-turmas');
+  if(!el)return;
+  const {data}=await db.from('alunos').select('serie,turma');
+  if(!data)return;
+  const contagem={};
+  data.forEach(a=>{const k=a.serie+'|'+a.turma;contagem[k]=(contagem[k]||0)+1;});
+  const series=['6º Ano','7º Ano','8º Ano','9º Ano'];
+  const turmas='ABCDEFGH'.split('');
+  let h='';
+  series.forEach(s=>{
+    turmas.forEach(t=>{
+      const k=s+'|'+t;
+      const n=contagem[k];
+      if(!n)return;
+      h+=`<div onclick="filtrarTurmaAlunos('${s}','${t}')"
+        style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;cursor:pointer;transition:all .15s"
+        onmouseover="this.style.borderColor='var(--accent)';this.style.background='var(--accent-bg)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--ink)">${s[0]}º${t}</div>
+        <div style="font-size:12px;color:var(--ink3);margin-top:2px">${n} alunos</div>
+      </div>`;
+    });
+  });
+  el.innerHTML=h;
+}
+
+async function filtrarTurmaAlunos(serie,turma){
+  document.getElementById('aluno-busca').value='';
+  const el=document.getElementById('aluno-resultado');
+  el.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  const {data}=await db.from('alunos').select('*').eq('serie',serie).eq('turma',turma).order('numero');
+  if(!data||!data.length){el.innerHTML='';return;}
+  let h=`<div style="font-family:'Syne',sans-serif;font-weight:600;font-size:14px;margin-bottom:10px">${serie} — Turma ${turma} (${data.length} alunos)</div>`;
+  h+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">`;
+  data.forEach(a=>{
+    h+=`<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border)">
+      <span style="width:28px;font-size:12px;color:var(--ink3);text-align:right">${a.numero||''}</span>
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--blue-bg);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--blue);flex-shrink:0">${a.nome.split(' ').map(n=>n[0]).slice(0,2).join('')}</div>
+      <span style="font-size:14px;font-weight:500">${a.nome}</span>
+    </div>`;
+  });
+  h+='</div>';
+  el.innerHTML=h;
 }
 
 // CORRETORES
@@ -757,9 +911,22 @@ async function openModalPacote(){
 }
 
 function toggleTipo(){
-  const normal=document.querySelector('input[name="pk-tipo"]:checked')?.value==='normal';
-  document.getElementById('pk-normal-wrap').style.display=normal?'':'none';
-  document.getElementById('pk-atrasadas-wrap').style.display=normal?'none':'';
+  const tipo=document.querySelector('input[name="pk-tipo"]:checked')?.value||'normal';
+  document.getElementById('pk-normal-wrap').style.display=tipo==='normal'?'':'none';
+  document.getElementById('pk-atrasadas-wrap').style.display=tipo==='atrasadas'?'':'none';
+  document.getElementById('pk-extra-wrap').style.display=tipo==='extra'?'':'none';
+  // Proposta/versão só para normal e atrasadas
+  const showProp=tipo!=='extra';
+  document.getElementById('pk-proposta-wrap').style.display=showProp?'':'none';
+  document.getElementById('pk-versao-wrap').style.display=showProp?'':'none';
+}
+
+function calcExtraTotal(){
+  const qtd=parseInt(document.getElementById('pk-extra-qtd')?.value)||0;
+  const unit=parseFloat(document.getElementById('pk-extra-valor-unit')?.value)||0;
+  const total=(qtd*unit).toFixed(2).replace('.',',');
+  const el=document.getElementById('pk-extra-total');
+  if(el)el.textContent='R$ '+total;
 }
 
 let pkSerieSelecionada=null;
@@ -872,6 +1039,31 @@ async function criarPacote(){
   if(!corretorId){showErr(errEl,'Selecione um corretor.');return;}
 
   let inserts=[],nomePacote='',serie='',turma='',proposta=null,versao=null;
+
+  if(tipo==='extra'){
+    const desc=document.getElementById('pk-extra-desc').value.trim();
+    const qtd=parseInt(document.getElementById('pk-extra-qtd').value)||0;
+    const valorUnit=parseFloat(document.getElementById('pk-extra-valor-unit').value)||6;
+    const dataRet=document.getElementById('pk-data-retirada').value;
+    const dataDev=document.getElementById('pk-data-devolucao').value;
+    if(!desc){showErr(errEl,'Descreva o pacote extra.');return;}
+    if(!qtd){showErr(errEl,'Informe a quantidade.');return;}
+    const {data:pac,error}=await db.from('pacotes').insert({
+      nome:`Extra: ${desc}`,tipo:'extra',serie:null,turma:null,
+      proposta:null,versao:null,corretor_id:corretorId,
+      valor_por_redacao:valorUnit,quantidade_atrasadas:qtd,
+      status:'aberto',data_retirada:dataRet||null,data_devolucao:dataDev||null
+    }).select().single();
+    if(error){showErr(errEl,'Erro: '+error.message);return;}
+    // Cria N linhas avulsas
+    await db.from('notas_redacao').insert(
+      Array.from({length:qtd},()=>({pacote_id:pac.id,aluno_id:null,nota:null,situacao:'normal',nome_avulso:null}))
+    );
+    closeModal('modal-pacote');
+    toast(`Pacote extra criado com ${qtd} itens! ✓`,'success');
+    loadDashboard();
+    return;
+  }
 
   if(tipo==='normal'){
     proposta=document.querySelector('input[name="pk-proposta"]:checked')?.value;
@@ -1443,7 +1635,7 @@ function renderPrepLista(alunos){
   html+='</div>';
 
   alunos.forEach(a=>{
-    html+=`<div style="display:grid;grid-template-columns:40px 1fr 200px 220px;gap:0;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center" id="prep-row-${a.id}">
+    html+=`<div style="display:grid;grid-template-columns:40px 1fr 240px 220px;gap:0;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center" id="prep-row-${a.id}">
       <span style="font-size:13px;color:var(--ink3)">${a.numero||''}</span>
       <span style="font-size:14px;font-weight:500">${a.nome}</span>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -1454,13 +1646,15 @@ function renderPrepLista(alunos){
           <input type="radio" name="sit-${a.id}" value="zerada" onchange="setPrepSit('${a.id}','zerada')"/> Zerada
         </label>
         <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
+          <input type="radio" name="sit-${a.id}" value="atraso" onchange="setPrepSit('${a.id}','atraso')"/> Atraso
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer">
           <input type="radio" name="sit-${a.id}" value="nao_entregou" onchange="setPrepSit('${a.id}','nao_entregou')"/> Não entregou
         </label>
       </div>
       <select id="motivo-${a.id}" onchange="setPrepMotivo('${a.id}',this.value)"
         style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;background:var(--surface);color:var(--ink);outline:none;opacity:0.4;pointer-events:none">
         <option value="">Motivo...</option>
-        ${MOTIVOS.map(m=>`<option value="${m}">${MOTIVOS_LABEL[m]}</option>`).join('')}
       </select>
     </div>`;
   });
@@ -1469,14 +1663,26 @@ function renderPrepLista(alunos){
   el.innerHTML=html;
 }
 
+const MOTIVOS_ZERADA_MAP={'folha_inadequada':'Folha inadequada','feita_em_sala':'Feita em sala','desorganizacao':'Desorganização'};
+const MOTIVOS_ATRASO_MAP={'2_horario':'2º horário','saude':'Saúde','esqueceu':'Esqueceu','folha_inadequada':'Folha inadequada','nao_informou':'Não informou','desorganizacao':'Desorganização','viagem':'Viagem','outro':'Outro'};
+
 function setPrepSit(id,sit){
   prepDados[id].situacao=sit;
+  prepDados[id].motivo='';
   const motivoEl=document.getElementById('motivo-'+id);
-  if(sit==='nao_entregou'){
-    motivoEl.style.opacity='1';motivoEl.style.pointerEvents='auto';
+  const temMotivo=sit==='zerada'||sit==='atraso';
+  motivoEl.style.opacity=temMotivo?'1':'0.4';
+  motivoEl.style.pointerEvents=temMotivo?'auto':'none';
+  motivoEl.value='';
+  // Carrega opções certas
+  if(sit==='zerada'){
+    motivoEl.innerHTML='<option value="">Motivo...</option>'+
+      Object.entries(MOTIVOS_ZERADA_MAP).map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+  }else if(sit==='atraso'){
+    motivoEl.innerHTML='<option value="">Motivo...</option>'+
+      Object.entries(MOTIVOS_ATRASO_MAP).map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
   }else{
-    motivoEl.style.opacity='0.4';motivoEl.style.pointerEvents='none';
-    motivoEl.value='';prepDados[id].motivo='';
+    motivoEl.innerHTML='<option value="">Motivo...</option>';
   }
   atualizarPrepCount();
 }
@@ -1485,10 +1691,16 @@ function setPrepMotivo(id,motivo){prepDados[id].motivo=motivo;}
 
 function atualizarPrepCount(){
   const vals=Object.values(prepDados);
-  const normais=vals.filter(v=>v.situacao!=='nao_entregou').length;
+  const normais=vals.filter(v=>v.situacao==='normal').length;
+  const zeradas=vals.filter(v=>v.situacao==='zerada').length;
+  const atrasos=vals.filter(v=>v.situacao==='atraso').length;
   const fora=vals.filter(v=>v.situacao==='nao_entregou').length;
-  document.getElementById('prep-count-normal').textContent=normais;
+  const paraCorrecao=normais+zeradas; // zerada vai no envelope, atraso não
+  document.getElementById('prep-count-normal').textContent=paraCorrecao;
   document.getElementById('prep-count-fora').textContent=fora;
+  // Atualiza label do contador se existir
+  const el=document.getElementById('prep-count-atraso');
+  if(el)el.textContent=atrasos;
 }
 
 async function salvarPreparacao(){
@@ -1501,7 +1713,8 @@ async function salvarPreparacao(){
   // Salva na tabela preparacoes
   const itens=Object.entries(prepDados).map(([aluno_id,d])=>({
     aluno_id, serie, turma, proposta, versao:parseInt(versao),
-    situacao:d.situacao, motivo_atraso:d.motivo||null
+    situacao:d.situacao,
+    motivo_atraso:(d.situacao==='zerada'||d.situacao==='atraso')?d.motivo||null:null
   }));
 
   // Upsert por aluno+proposta+versao
