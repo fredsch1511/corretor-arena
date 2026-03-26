@@ -1156,25 +1156,27 @@ async function loadNotasTurma(){
 
   const notasMap={};
   alunos.forEach(a=>{notasMap[a.id]={};COLUNAS.forEach(c=>{notasMap[a.id][c.prop+'·'+c.ver]=null;});});
-  (hist||[]).forEach(n=>{const k=n.proposta+'·'+n.versao;if(notasMap[n.aluno_id]&&k in notasMap[n.aluno_id])notasMap[n.aluno_id][k]=n.nota;});
+  (hist||[]).forEach(n=>{const k=n.proposta+'·'+n.versao;if(notasMap[n.aluno_id]&&k in notasMap[n.aluno_id])notasMap[n.aluno_id][k]=n.nota!==null?parseFloat(n.nota):null;});
   (pacNotas||[]).forEach(n=>{
     if(!n.aluno_id)return;
     const prop=n.proposta||n.pacotes?.proposta;
     const ver=n.versao||n.pacotes?.versao;
     if(!prop||!ver)return;
     const k=prop+'·'+ver;
-    if(notasMap[n.aluno_id]&&k in notasMap[n.aluno_id]&&n.nota!==null)notasMap[n.aluno_id][k]=n.nota;
+    if(notasMap[n.aluno_id]&&k in notasMap[n.aluno_id]&&n.nota!==null)notasMap[n.aluno_id][k]=parseFloat(n.nota);
   });
 
   function corNota(n){
-    if(n===null)return{bg:'var(--surface2)',color:'var(--ink3)',text:'—'};
+    if(n===null||n===undefined)return{bg:'var(--surface2)',color:'var(--ink3)',text:'—'};
+    n=parseFloat(n);
+    if(isNaN(n))return{bg:'var(--surface2)',color:'var(--ink3)',text:'—'};
     if(n>=7)return{bg:'#EAF4EE',color:'#2D6A4F',text:n.toFixed(1).replace('.',',')};
     if(n>=5)return{bg:'#FDF5E0',color:'#B5860D',text:n.toFixed(1).replace('.',',')};
     return{bg:'#FDECEA',color:'#C0392B',text:n.toFixed(1).replace('.',',')};
   }
 
   let totalN=0,somaT=0,ac7=0,ab5=0;
-  alunos.forEach(a=>{COLUNAS.forEach(c=>{const n=notasMap[a.id][c.prop+'·'+c.ver];if(n!==null){totalN++;somaT+=n;if(n>=7)ac7++;if(n<5)ab5++;}});});
+  alunos.forEach(a=>{COLUNAS.forEach(c=>{let n=notasMap[a.id][c.prop+'·'+c.ver];if(n!==null&&n!==undefined){n=parseFloat(n);if(!isNaN(n)){totalN++;somaT+=n;if(n>=7)ac7++;if(n<5)ab5++;}}});});
   const mediaG=totalN>0?(somaT/totalN).toFixed(2).replace('.',','):'—';
 
   if(statsEl){
@@ -1197,7 +1199,7 @@ async function loadNotasTurma(){
 
   alunos.forEach(a=>{
     const notas=COLUNAS.map(c=>notasMap[a.id][c.prop+'·'+c.ver]);
-    const vals=notas.filter(n=>n!==null);
+    const vals=notas.filter(n=>n!==null&&n!==undefined).map(n=>parseFloat(n)).filter(n=>!isNaN(n));
     const media=vals.length>0?vals.reduce((s,n)=>s+n,0)/6:null;
     const mc=corNota(media);
     table+=`<tr style="border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
@@ -1210,7 +1212,7 @@ async function loadNotasTurma(){
     </tr>`;
   });
 
-  const mediaCols=COLUNAS.map(c=>{const v=alunos.map(a=>notasMap[a.id][c.prop+'·'+c.ver]).filter(n=>n!==null);return v.length>0?v.reduce((s,n)=>s+n,0)/v.length:null;});
+  const mediaCols=COLUNAS.map(c=>{const v=alunos.map(a=>notasMap[a.id][c.prop+'·'+c.ver]).filter(n=>n!==null&&n!==undefined).map(n=>parseFloat(n)).filter(n=>!isNaN(n));return v.length>0?v.reduce((s,n)=>s+n,0)/v.length:null;});
   table+=`<tr style="background:var(--surface2);border-top:2px solid var(--border)">
     <td style="padding:10px 14px"></td>
     <td style="padding:10px 14px;font-family:"Inter",sans-serif;font-weight:600;font-size:12px;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px">Média da turma</td>
