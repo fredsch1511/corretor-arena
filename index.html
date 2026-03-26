@@ -1945,22 +1945,10 @@ async function loadPacotesCorretor(){
   const disponiveis=pacotes.filter(p=>p.status==='aberto');
   const entregues=pacotes.filter(p=>p.status==='enviado'||p.status==='concluido');
 
-  let html=`
-  <!-- ABAS -->
-  <div style="display:flex;gap:8px;margin-bottom:16px">
-    <button id="tab-disp-btn" onclick="switchCorretorTab('disponiveis')"
-      style="flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:'Inter',sans-serif;background:var(--accent);color:#fff">
-      Disponíveis (${disponiveis.length})
-    </button>
-    <button id="tab-entr-btn" onclick="switchCorretorTab('entregues')"
-      style="flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:600;border:1px solid var(--border);cursor:pointer;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink2)">
-      Entregues (${entregues.length})
-    </button>
-  </div>
+  // Determina aba ativa
+  const abaAtiva = window._corretorAba || 'disponiveis';
 
-  <!-- DISPONÍVEIS -->
-  <div id="tab-disponiveis">`;
-
+  let htmlDisp = '';
   if(!disponiveis.length){
     html+=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center">
       <svg width="64" height="64" viewBox="0 0 80 80" fill="none" style="margin-bottom:16px;opacity:.3">
@@ -1996,7 +1984,14 @@ async function loadPacotesCorretor(){
   el.innerHTML=html;
 }
 
-function switchCorretorTab(tab){
+function trocarAbaCorretor(tab){
+  window._corretorAba = tab;
+  loadPacotesCorretor();
+}
+
+function switchCorretorTab(tab){ trocarAbaCorretor(tab); }
+
+function _switchCorretorTab_legacy(tab){
   // Mostra/esconde conteúdo
   const disp=document.getElementById('tab-disponiveis');
   const entr=document.getElementById('tab-entregues');
