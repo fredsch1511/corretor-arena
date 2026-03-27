@@ -1790,18 +1790,21 @@ async function loadPacotesCorretor(){
     return;
   }
 
-  // Pré-carrega TODAS as notas em uma query só
+  // Pré-carrega notas em lotes de 20 para evitar limite do Supabase
   let todasNotasMap={};
-  if(pacotes&&pacotes.length){
+  try {
     const ids=pacotes.map(p=>p.id);
-    const {data:tn}=await db.from('notas_redacao')
-      .select('id,nota,situacao,motivo_zero,motivo_atraso,proposta,versao,nome_avulso,pacote_id,alunos(id,nome,numero,turma,serie)')
-      .in('pacote_id',ids);
-    (tn||[]).forEach(n=>{
-      if(!todasNotasMap[n.pacote_id])todasNotasMap[n.pacote_id]=[];
-      todasNotasMap[n.pacote_id].push(n);
-    });
-  }
+    for(let i=0;i<ids.length;i+=20){
+      const batch=ids.slice(i,i+20);
+      const {data:tn,error:tnErr}=await db.from('notas_redacao')
+        .select('id,nota,situacao,motivo_zero,motivo_atraso,proposta,versao,nome_avulso,pacote_id,alunos(id,nome,numero,turma,serie)')
+        .in('pacote_id',batch);
+      if(!tnErr)(tn||[]).forEach(n=>{
+        if(!todasNotasMap[n.pacote_id])todasNotasMap[n.pacote_id]=[];
+        todasNotasMap[n.pacote_id].push(n);
+      });
+    }
+  } catch(e){ console.warn('Erro ao carregar notas:',e); }
 
   // Calcula valores usando o mapa já carregado
   let valorPeriodo=0, valorTotal=0;
