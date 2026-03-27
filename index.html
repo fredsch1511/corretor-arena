@@ -1158,175 +1158,52 @@ async function loadPacotesLista(){
   const el=document.getElementById('lista-pacotes');
   const {data}=await db.from('pacotes').select('*,usuarios(nome)').order('created_at',{ascending:false});
   if(!data||!data.length){
-    el.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 24px;text-align:center">
-      <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style="margin-bottom:20px;opacity:.3">
-        <rect x="8" y="28" width="64" height="44" rx="8" stroke="currentColor" stroke-width="3"/>
-        <path d="M8 44h64" stroke="currentColor" stroke-width="3"/>
-        <path d="M24 28V22a16 16 0 0132 0v6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-        <path d="M32 56h16M40 48v16" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-      </svg>
-      <div style="font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px">Nenhum pacote criado</div>
-      <div style="font-size:13px;color:var(--ink3);margin-bottom:24px;max-width:280px;line-height:1.5">Crie o primeiro pacote e atribua a um corretor para começar o fluxo</div>
-      <button onclick="openModalPacote()" class="btn btn-primary" style="padding:10px 24px;border-radius:10px;font-size:14px">+ Novo Pacote</button>
-    </div>`;
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Nenhum pacote criado ainda</div><div class="empty-sub">Clique em "+ Novo Pacote" para começar</div></div>';
     return;
   }
-
   const andamento=data.filter(p=>p.status==='aberto');
   const enviados=data.filter(p=>p.status==='enviado');
   const historico=data.filter(p=>p.status==='concluido');
 
-  // Saudação
-  const agora=new Date();
-  const hora=agora.getHours();
-  const saudacao=hora<12?'Bom dia':hora<18?'Boa tarde':'Boa noite';
-  const nomeCoord=currentUser?.nome?.split(' ')[0]||'';
-  const dataFormatada=agora.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
-  const dataLabel=dataFormatada.charAt(0).toUpperCase()+dataFormatada.slice(1);
-
-  // Conta alunos abaixo de 5 (aproximado — busca notas_historicas)
-  const {count:abaixo5}=await db.from('notas_historicas').select('*',{count:'exact',head:true}).lt('nota',5);
-
-  // Atividade recente — últimos pacotes modificados
-  const {data:recentes}=await db.from('pacotes')
-    .select('nome,status,updated_at,usuarios(nome)')
-    .order('updated_at',{ascending:false}).limit(4);
-
-  const statusLabel={aberto:'abriu',enviado:'enviou',concluido:'concluiu'};
-  const atividadeHTML=(recentes||[]).map(p=>{
-    const quando=new Date(p.updated_at);
-    const diffH=Math.round((agora-quando)/3600000);
-    const diffLabel=diffH<1?'agora há pouco':diffH<24?diffH+'h atrás':diffH<48?'ontem':quando.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-    const cor=p.status==='enviado'?'var(--green)':p.status==='concluido'?'var(--blue)':'var(--accent)';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border)">
-      <div style="width:8px;height:8px;border-radius:50%;background:${cor};flex-shrink:0"></div>
-      <div style="flex:1;font-size:13px;color:var(--ink)">
-        <span style="font-weight:600">${p.usuarios?.nome||'—'}</span>
-        <span style="color:var(--ink3)"> ${statusLabel[p.status]||'atualizou'} </span>
-        <span style="font-weight:500">${p.nome}</span>
-      </div>
-      <div style="font-size:11px;color:var(--ink3);flex-shrink:0">${diffLabel}</div>
-    </div>`;
-  }).join('');
-
-  const saudacaoHTML=`
-  <div style="margin-bottom:24px">
-    <div style="font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.5px;margin-bottom:3px">${saudacao}, ${nomeCoord}! 👋</div>
-    <div style="font-size:13px;color:var(--ink3);margin-bottom:20px">${dataLabel}</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="setPacoteAba('andamento')">
-        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);margin-bottom:8px"></div>
-        <div style="font-size:24px;font-weight:800;color:var(--accent);line-height:1">${andamento.length}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:4px">Em andamento</div>
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer" onclick="setPacoteAba('receber')">
-        <div style="width:8px;height:8px;border-radius:50%;background:var(--blue);margin-bottom:8px"></div>
-        <div style="font-size:24px;font-weight:800;color:var(--blue);line-height:1">${enviados.length}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:4px">Receber físico</div>
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px">
-        <div style="width:8px;height:8px;border-radius:50%;background:var(--red);margin-bottom:8px"></div>
-        <div style="font-size:24px;font-weight:800;color:var(--red);line-height:1">${abaixo5||0}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:4px">Abaixo de 5</div>
-      </div>
-    </div>
-    ${atividadeHTML?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
-      <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;padding:10px 16px;border-bottom:1px solid var(--border)">Atividade recente</div>
-      ${atividadeHTML}
-    </div>`:''}
-  </div>`;
-
-  // Calcula totais financeiros
-  const calcValor=lista=>lista.reduce((s,p)=>{
-    const qtd=p.quantidade_atrasadas||0;
-    return s+(qtd*(p.valor_por_redacao||6));
-  },0);
-  const pendente=calcValor(andamento);
-  const aReceber=calcValor(enviados);
-  const pago=calcValor(historico);
-
-  function fmtVal(v){return'R$ '+v.toFixed(2).replace('.',',');}
-  function fmtData(d){
-    if(!d)return'—';
-    return new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  function renderTabela(lista){
+    if(!lista.length) return '<div style="padding:16px;text-align:center;font-size:13px;color:var(--ink3)">Nenhum pacote</div>';
+    let h='<table><thead><tr><th>Pacote</th><th>Corretor</th><th>Datas</th><th>Ações</th></tr></thead><tbody>';
+    for(const p of lista){
+      const ret=p.data_retirada?new Date(p.data_retirada+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'—';
+      const dev=p.data_devolucao?new Date(p.data_devolucao+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'—';
+      h+=`<tr>
+        <td><strong style="font-size:13px">${p.nome}</strong></td>
+        <td style="font-size:13px">${p.usuarios?.nome||'—'}</td>
+        <td style="font-size:12px;color:var(--ink2)">↓ ${ret} · ↑ ${dev}</td>
+        <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${p.status==='enviado'?`<button class="btn btn-sm btn-success" onclick="receberFisico('${p.id}')">📦 Receber</button><button class="btn btn-sm btn-blue" onclick="reabrirPacote('${p.id}')">Reabrir</button>`:''}
+          ${p.status==='aberto'?`<button class="btn btn-sm btn-blue" onclick="reabrirPacote('${p.id}')">Reabrir</button>`:''}
+          <button class="btn btn-sm btn-outline" onclick="gerarRelatorioNotas('${p.id}','${p.nome.replace(/'/g,"\'")}')" title="PDF Notas">📋</button>
+          <button class="btn btn-sm btn-outline" onclick="gerarPDF('${p.id}','${p.nome.replace(/'/g,"\'")}')" title="PDF Pendências">⚠️</button>
+          <button class="btn btn-sm btn-danger" onclick="excluirPacote('${p.id}')">✕</button>
+        </div></td>
+      </tr>`;
+    }
+    return h+'</tbody></table>';
   }
 
-  function renderCard(p){
-    const dev=fmtData(p.data_devolucao);
-    const ret=fmtData(p.data_retirada);
-    const corretor=p.usuarios?.nome||'—';
-    const acento=p.status==='aberto'?'#D4541E':p.status==='enviado'?'#185FA5':'#2D6A4F';
-    const subInfo=p.tipo==='atrasadas'
-      ?`${corretor} · ${p.quantidade_atrasadas||0} redações · misto`
-      :`${corretor}`;
-
-    const acoes=p.status==='enviado'?`
-      <button class="btn btn-sm btn-success" onclick="receberFisico('${p.id}')" style="font-size:11px;padding:5px 9px">📦 Receber</button>
-      <button class="btn btn-sm btn-blue" onclick="reabrirPacote('${p.id}')" style="font-size:11px;padding:5px 9px">Reabrir</button>
-      <button class="btn btn-sm btn-outline" onclick="gerarRelatorioNotas('${p.id}','${p.nome.replace(/'/g,"\'")}')" style="font-size:11px;padding:5px 9px">📋</button>
-    `:p.status==='aberto'?`
-      <button class="btn btn-sm btn-outline" onclick="gerarRelatorioNotas('${p.id}','${p.nome.replace(/'/g,"\'")}')" style="font-size:11px;padding:5px 9px">📋</button>
-      <button class="btn btn-sm btn-outline" onclick="gerarPDF('${p.id}','${p.nome.replace(/'/g,"\'")}')" style="font-size:11px;padding:5px 9px">⚠️</button>
-      <button class="btn btn-sm btn-danger" onclick="excluirPacote('${p.id}')" style="font-size:11px;padding:5px 9px">✕</button>
-    `:`
-      <button class="btn btn-sm btn-outline" onclick="gerarRelatorioNotas('${p.id}','${p.nome.replace(/'/g,"\'")}')" style="font-size:11px;padding:5px 9px">📋</button>
-    `;
-
-    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:14px;${p.status==='concluido'?'opacity:.7':''}">
-      <div style="width:4px;height:44px;border-radius:2px;background:${acento};flex-shrink:0"></div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nome}</div>
-        <div style="font-size:12px;color:var(--ink3);margin-top:2px">${subInfo}</div>
+  function secao(titulo,cor,icon,lista){
+    if(!lista.length&&titulo==='Histórico') return '';
+    return `<div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid ${cor}22">
+        <span style="font-size:14px">${icon}</span>
+        <span style="font-family:'Inter',sans-serif;font-size:14px;font-weight:700;color:${cor}">${titulo}</span>
+        <span style="font-size:11px;font-weight:700;background:${cor}18;color:${cor};padding:2px 8px;border-radius:10px">${lista.length}</span>
       </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:10px;color:var(--ink3)">Devolução</div>
-        <div style="font-size:13px;font-weight:600;color:var(--ink)">${dev}</div>
-      </div>
-      <div style="width:1px;height:32px;background:var(--border);flex-shrink:0"></div>
-      <div style="display:flex;gap:5px;flex-shrink:0">${acoes}</div>
+      <div class="table-wrap">${renderTabela(lista)}</div>
     </div>`;
   }
 
-  function secaoLabel(titulo,lista){
-    if(!lista.length)return'';
-    return`<div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;display:flex;align-items:center;gap:8px">
-      ${titulo}<span style="flex:1;height:1px;background:var(--border)"></span>
-    </div>${lista.map(renderCard).join('')}`;
-  }
-
-  // Filtra por aba ativa
-  const abaAtiva=window._pacoteAba||'andamento';
-  let listaFiltrada=[];
-  let secoes='';
-  if(abaAtiva==='andamento'){
-    secoes=secaoLabel('Em andamento',andamento)+(enviados.length?secaoLabel('Receber físico',enviados):'');
-  } else if(abaAtiva==='receber'){
-    secoes=secaoLabel('Receber físico',enviados);
-  } else {
-    secoes=secaoLabel('Histórico',historico);
-  }
-
-  // Stats
-  const statsHTML=`
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
-    ${[
-      {key:'andamento',label:'Em andamento',val:andamento.length,sub:fmtVal(pendente)+' pendentes',cor:'var(--accent)'},
-      {key:'receber',label:'Receber físico',val:enviados.length,sub:'enviado pelo corretor',cor:'var(--blue)'},
-      {key:'historico',label:'Histórico',val:historico.length,sub:fmtVal(pago)+' pagos',cor:'var(--green)'},
-    ].map(s=>`
-      <div onclick="setPacoteAba('${s.key}')" style="background:var(--surface);border:${abaAtiva===s.key?`2px solid ${s.cor}`:'1px solid var(--border)'};border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .15s;${abaAtiva===s.key?`box-shadow:0 0 0 3px ${s.cor}18`:''}">
-        <div style="width:10px;height:10px;border-radius:50%;background:${s.cor};flex-shrink:0"></div>
-        <div style="flex:1">
-          <div style="font-size:11px;color:var(--ink3);font-weight:500">${s.label}</div>
-          <div style="font-size:22px;font-weight:800;color:${s.cor};line-height:1;margin-top:2px">${s.val}</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:2px">${s.sub}</div>
-        </div>
-      </div>`).join('')}
-  </div>`;
-
-  el.innerHTML=statsHTML+`<div style="display:flex;flex-direction:column;gap:8px">${secoes||'<div class="empty-state"><div class="empty-title">Nenhum pacote nesta categoria</div></div>'}</div>`;
+  el.innerHTML=
+    secao('Em andamento','var(--accent)','✏️',andamento)+
+    secao('Confirmar recebimento físico','var(--blue)','📦',enviados)+
+    secao('Histórico','var(--green)','✅',historico);
 }
-
 function setPacoteAba(aba){
   window._pacoteAba=aba;
   loadPacotesLista();
@@ -1547,60 +1424,22 @@ async function filtrarTurmaAlunos(serie,turma){
 async function loadCorretores(){
   const {data}=await db.from('usuarios').select('*').eq('role','corretor').order('nome');
   const el=document.getElementById('lista-corretores');
-  const gradients=[
-    'linear-gradient(135deg,#F0997B,#D4541E)',
-    'linear-gradient(135deg,#85B7EB,#1B4F8A)',
-    'linear-gradient(135deg,#9FE1CB,#0F6E56)',
-    'linear-gradient(135deg,#FAC775,#854F0B)',
-    'linear-gradient(135deg,#ED93B1,#993556)',
-    'linear-gradient(135deg,#AFA9EC,#3C3489)',
-  ];
-
   if(!data||!data.length){
-    el.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center">
-      <svg width="64" height="64" viewBox="0 0 80 80" fill="none" style="margin-bottom:16px;opacity:.3"><circle cx="40" cy="28" r="14" stroke="currentColor" stroke-width="3"/><path d="M14 66c0-14.359 11.64-26 26-26s26 11.641 26 26" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
-      <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:8px">Nenhum corretor cadastrado</div>
-      <div style="font-size:13px;color:var(--ink3);margin-bottom:20px">Adicione corretores para começar</div>
-      <button onclick="openModalCorretor()" class="btn btn-primary">+ Cadastrar corretor</button>
-    </div>`;
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">👤</div><div class="empty-title">Nenhum corretor cadastrado</div><div class="empty-sub">Clique em "+ Cadastrar Corretor" para começar</div></div>';
     return;
   }
-
-  let html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">';
-  for(const [i,c] of data.entries()){
-    const {count:abertos}=await db.from('pacotes').select('*',{count:'exact',head:true}).eq('corretor_id',c.id).eq('status','aberto');
-    const {count:concluidos}=await db.from('pacotes').select('*',{count:'exact',head:true}).eq('corretor_id',c.id).eq('status','concluido');
-    const iniciais=c.nome.split(' ').map(n=>n[0]).slice(0,2).join('');
-    const grad=gradients[i%gradients.length];
-    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px">
-      <div style="width:46px;height:46px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;margin-bottom:12px">${iniciais}</div>
-      <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nome}</div>
-      <div style="font-size:11px;color:var(--ink3);margin-bottom:14px">@${c.username}</div>
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <div style="flex:1;background:var(--surface2);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-size:18px;font-weight:800;color:var(--accent)">${abertos||0}</div>
-          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.3px;margin-top:2px">Abertos</div>
-        </div>
-        <div style="flex:1;background:var(--surface2);border-radius:8px;padding:8px;text-align:center">
-          <div style="font-size:18px;font-weight:800;color:var(--green)">${concluidos||0}</div>
-          <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.3px;margin-top:2px">Concluídos</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-sm btn-outline" style="flex:1;font-size:12px" onclick="editarCorretor('${c.id}','${c.nome.replace(/'/g,"\'")}','${c.username}')">Editar</button>
-        <button class="btn btn-sm btn-danger" style="font-size:12px;padding:6px 10px" onclick="removerCorretor('${c.id}','${c.nome.replace(/'/g,"\'")}')" >✕</button>
-      </div>
-    </div>`;
+  let h='<table><thead><tr><th>Nome</th><th>Usuário</th><th>Ações</th></tr></thead><tbody>';
+  for(const c of data){
+    h+=`<tr>
+      <td><strong>${c.nome}</strong></td>
+      <td><code style="font-size:12px;background:var(--surface2);padding:2px 8px;border-radius:4px">${c.username}</code></td>
+      <td><div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-outline" onclick="editarCorretor('${c.id}','${c.nome.replace(/'/g,"\'")}','${c.username}')">Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="removerCorretor('${c.id}','${c.nome.replace(/'/g,"\'")}')" >Remover</button>
+      </div></td>
+    </tr>`;
   }
-  html+=`<div onclick="openModalCorretor()" style="background:var(--surface);border:2px dashed var(--border);border-radius:16px;padding:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;min-height:190px;transition:border-color .15s"
-    onmouseover="this.style.borderColor='var(--accent)';this.style.background='var(--accent-bg)'"
-    onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
-    <div style="width:44px;height:44px;border-radius:50%;background:var(--accent-bg);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--accent)">+</div>
-    <div style="font-size:13px;font-weight:600;color:var(--accent)">Novo corretor</div>
-    <div style="font-size:11px;color:var(--ink3)">Cadastrar acesso</div>
-  </div>`;
-  html+='</div>';
-  el.innerHTML=html;
+  el.innerHTML=h+'</tbody></table>';
 }
 async function removerCorretor(id,nome){if(!confirm(`Remover corretor "${nome}"?`))return;await db.from('usuarios').delete().eq('id',id);toast('Corretor removido.','success');loadCorretores();}
 
@@ -1951,6 +1790,19 @@ async function loadPacotesCorretor(){
     return;
   }
 
+  // Pré-carrega TODAS as notas em uma query só
+  let todasNotasMap={};
+  if(pacotes&&pacotes.length){
+    const ids=pacotes.map(p=>p.id);
+    const {data:tn}=await db.from('notas_redacao')
+      .select('id,nota,situacao,motivo_zero,motivo_atraso,proposta,versao,nome_avulso,pacote_id,alunos(id,nome,numero,turma,serie)')
+      .in('pacote_id',ids);
+    (tn||[]).forEach(n=>{
+      if(!todasNotasMap[n.pacote_id])todasNotasMap[n.pacote_id]=[];
+      todasNotasMap[n.pacote_id].push(n);
+    });
+  }
+
   // Calcula valores usando o mapa já carregado
   let valorPeriodo=0, valorTotal=0;
   for(const p of pacotes){
@@ -1965,6 +1817,8 @@ async function loadPacotesCorretor(){
   // Atualiza topbar
   const topbarVal=document.getElementById('corretor-valor-topbar');
   if(topbarVal)topbarVal.textContent='R$ '+valorPeriodo.toFixed(2).replace('.',',');
+
+
 
 
   // Determina aba ativa
