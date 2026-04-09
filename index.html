@@ -1237,7 +1237,7 @@ async function excluirPacote(id){if(!confirm('Excluir pacote e todas as notas? I
 async function loadNotasTurma(){
   const serie=document.getElementById('f-serie').value;
   const turma=document.getElementById('f-turma').value;
-  const bimNotas=parseInt(document.getElementById('f-bim-notas')?.value||'1');
+  const bimNotas=bimestreAtual||1;
   const el=document.getElementById('tabela-notas');
   const resumoEl=document.getElementById('notas-resumo');
   const statsEl=document.getElementById('notas-stats');
@@ -3369,14 +3369,7 @@ async function exportarPDFSerie(){
   const serie=document.getElementById('f-serie').value;
   if(!serie){toast('Selecione uma série primeiro','error');return;}
 
-  const bimEl=document.getElementById('f-bim-notas');
-  const bimNotas=bimEl?parseInt(bimEl.value||'1'):1;
   const TURMAS=['A','B','C','D','E','F','G','H'];
-  const COLUNAS_DEF=[
-    {prop:'P1',ver:1,label:'P1·1ª'},{prop:'P1',ver:2,label:'P1·2ª'},
-    {prop:'P2',ver:1,label:'P2·1ª'},{prop:'P2',ver:2,label:'P2·2ª'},
-    {prop:'P3',ver:1,label:'P3·1ª'},{prop:'P3',ver:2,label:'P3·2ª'},
-  ];
 
   // Modal de progresso
   const overlay=document.createElement('div');
@@ -3401,62 +3394,54 @@ async function exportarPDFSerie(){
     if(p)p.textContent=Math.round(pct)+'%';
   };
 
+  // Salva estado atual dos selects para restaurar depois
+  const serieOrig=document.getElementById('f-serie').value;
+  const turmaOrig=document.getElementById('f-turma').value;
+
   const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
   let primeira=true;
   let count=0;
 
+  // Força série no seletor
+  document.getElementById('f-serie').value=serie;
+
   for(const turma of TURMAS){
     count++;
-    const pct=(count/TURMAS.length)*90;
-    setP(pct,`Carregando Turma ${turma}...`);
+    setP((count/TURMAS.length)*85,`Carregando Turma ${turma}...`);
     await new Promise(r=>setTimeout(r,0));
 
-    const {data:alunos}=await db.from('alunos').select('id,nome,numero,turma')
-      .eq('serie',serie)
-      .eq('turma',turma)
-      .order('numero',{ascending:true});
+    // Usa exatamente a mesma função que renderiza o boletim
+    document.getElementById('f-turma').value=turma;
+    window._notasExportData=null;
+    await loadNotasTurma();
 
-    if(!alunos||!alunos.length)continue;
-
-    const ids=alunos.map(a=>a.id);
-    let hist=[],pacNotas=[];
-    for(let i=0;i<ids.length;i+=100){
-      const batch=ids.slice(i,i+100);
-      const {data:h}=await db.from('notas_historicas').select('aluno_id,proposta,versao,nota')
-        .in('aluno_id',batch).eq('bimestre',bimNotas);
-      if(h)hist.push(...h);
-    }
-    for(let i=0;i<ids.length;i+=100){
-      const batch=ids.slice(i,i+100);
-      const {data:pn}=await db.from('notas_redacao')
-        .select('aluno_id,nota,situacao,proposta,versao,pacote_id,pacotes!inner(proposta,versao,tipo)')
-        .in('aluno_id',batch).not('aluno_id','is',null).not('nota','is',null);
-      if(pn)pacNotas.push(...pn);
-    }
-
-    const notasMap={};
-    alunos.forEach(a=>{notasMap[a.id]={};COLUNAS_DEF.forEach(c=>{notasMap[a.id][c.prop+'·'+String(c.ver)]=null;});});
-    hist.forEach(n=>{const k=n.proposta+'·'+String(n.versao);if(notasMap[n.aluno_id]&&k in notasMap[n.aluno_id])notasMap[n.aluno_id][k]=n.nota!==null?parseFloat(n.nota):null;});
-    pacNotas.forEach(n=>{
-      if(!n.aluno_id||n.nota===null)return;
-      const prop=n.proposta||(n.pacotes&&n.pacotes.proposta)||null;
-      const ver=n.versao||(n.pacotes&&n.pacotes.versao)||null;
-      if(!prop||!ver)return;
-      const k=prop+'·'+String(ver);
-      if(notasMap[n.aluno_id]&&k in notasMap[n.aluno_id])notasMap[n.aluno_id][k]=parseFloat(n.nota);
-    });
+    const d=window._notasExportData;
+    if(!d||!d.alunos||!d.alunos.length)continue;
 
     if(!primeira)doc.addPage();
-    gerarSecaoPDF(doc,{serie,turma,bimNotas,alunos,notasMap,COLUNAS:COLUNAS_DEF},0);
+    gerarSecaoPDF(doc,d,0);
     primeira=false;
   }
+
+  // Restaura selects
+  document.getElementById('f-serie').value=serieOrig;
+  document.getElementById('f-turma').value=turmaOrig;
 
   setP(98,'Finalizando...');
   await new Promise(r=>setTimeout(r,100));
 
+  if(primeira){
+    document.body.removeChild(overlay);
+    toast('Nenhuma turma com dados encontrada','error');
+    return;
+  }
+
+  const bim=bimestreAtual||1;
   const dataHoje=new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
-  doc.save(`Relatorio_${serie.replace('º Ano','')}_${bimNotas}Bim_${dataHoje}.pdf`);
+  doc.save(`Relatorio_${serie.replace('º Ano','')}_${bim}Bim_${dataHoje}.pdf`);
   document.body.removeChild(overlay);
+  // Restaura boletim da turma original
+  await loadNotasTurma();
   toast(`PDF do ${serie} gerado! ✓`,'success');
 }
 
@@ -3465,8 +3450,7 @@ async function exportarRelatorioCompleto(){
   const {jsPDF}=window.jspdf;
   if(!jsPDF){toast('Biblioteca PDF não carregada','error');return;}
 
-  const bimEl=document.getElementById('f-bim-notas');
-  const bimNotas=bimEl?parseInt(bimEl.value||'1'):1;
+  const bimNotas=bimestreAtual||1;
 
   const SERIES=['6º Ano','7º Ano','8º Ano','9º Ano'];
   const TURMAS=['A','B','C','D','E','F','G','H'];
@@ -3515,7 +3499,7 @@ async function exportarRelatorioCompleto(){
       // Busca alunos da turma
       const {data:alunos}=await db.from('alunos').select('id,nome,numero,turma')
         .eq('serie',serie)
-        .eq('turma',turma)
+        .or(`turma.eq.${turma},turma.ilike.%${turma}`)
         .order('numero',{ascending:true});
 
       if(!alunos||!alunos.length)continue;
