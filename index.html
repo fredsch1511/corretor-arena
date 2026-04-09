@@ -3413,7 +3413,7 @@ async function exportarPDFSerie(){
 
     const {data:alunos}=await db.from('alunos').select('id,nome,numero,turma')
       .eq('serie',serie)
-      .or(`turma.eq.${turma},turma.ilike.%${turma}`)
+      .eq('turma',turma)
       .order('numero',{ascending:true});
 
     if(!alunos||!alunos.length)continue;
@@ -3425,9 +3425,12 @@ async function exportarPDFSerie(){
       const {data:h}=await db.from('notas_historicas').select('aluno_id,proposta,versao,nota')
         .in('aluno_id',batch).eq('bimestre',bimNotas);
       if(h)hist.push(...h);
+    }
+    for(let i=0;i<ids.length;i+=100){
+      const batch=ids.slice(i,i+100);
       const {data:pn}=await db.from('notas_redacao')
         .select('aluno_id,nota,situacao,proposta,versao,pacote_id,pacotes!inner(proposta,versao,tipo)')
-        .in('aluno_id',batch).not('aluno_id','is',null);
+        .in('aluno_id',batch).not('aluno_id','is',null).not('nota','is',null);
       if(pn)pacNotas.push(...pn);
     }
 
@@ -3511,8 +3514,8 @@ async function exportarRelatorioCompleto(){
 
       // Busca alunos da turma
       const {data:alunos}=await db.from('alunos').select('id,nome,numero,turma')
-        .ilike('ano',`%${serie.replace('º Ano','')}%`)
-        .or(`turma.eq.${turma},turma.ilike.%${turma}`)
+        .eq('serie',serie)
+        .eq('turma',turma)
         .order('numero',{ascending:true});
 
       if(!alunos||!alunos.length)continue;
@@ -3525,9 +3528,12 @@ async function exportarRelatorioCompleto(){
         const {data:h}=await db.from('notas_historicas').select('aluno_id,proposta,versao,nota')
           .in('aluno_id',batch).eq('bimestre',bimNotas);
         if(h)hist.push(...h);
+      }
+      for(let i=0;i<ids.length;i+=BATCH){
+        const batch=ids.slice(i,i+BATCH);
         const {data:pn}=await db.from('notas_redacao')
           .select('aluno_id,nota,situacao,proposta,versao,pacote_id,pacotes!inner(proposta,versao,tipo)')
-          .in('aluno_id',batch).not('aluno_id','is',null);
+          .in('aluno_id',batch).not('aluno_id','is',null).not('nota','is',null);
         if(pn)pacNotas.push(...pn);
       }
 
