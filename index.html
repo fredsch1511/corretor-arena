@@ -145,6 +145,8 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
 @media(max-width:640px){.app-body{padding:16px}.form-grid{grid-template-columns:1fr}.login-box{padding:32px 24px}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 <div id="toast"></div>
@@ -464,8 +466,8 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
     </div>
     <div id="tab-notas" style="display:none">
       <div class="section-header">
-        <div style="font-family:"Inter",sans-serif;font-size:16px;font-weight:600">Boletim da Turma</div>
-        <div class="filter-row">
+        <div style="font-family:'Inter',sans-serif;font-size:16px;font-weight:600">Boletim da Turma</div>
+        <div class="filter-row" style="align-items:center">
           <select id="f-serie" onchange="loadNotasTurma()">
             <option value="">Série...</option>
             <option>6º Ano</option><option>7º Ano</option><option>8º Ano</option><option>9º Ano</option>
@@ -475,6 +477,18 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
             <option>A</option><option>B</option><option>C</option><option>D</option>
             <option>E</option><option>F</option><option>G</option><option>H</option>
           </select>
+          <button id="btn-exportar-notas" class="btn btn-outline btn-sm" onclick="exportarNotasExcel()" style="display:none;gap:6px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Excel
+          </button>
+          <button id="btn-exportar-pdf-turma" class="btn btn-sm" onclick="exportarPDFTurma()" style="display:none;background:var(--red-bg);color:var(--red);border:1.5px solid #F5C6C2;gap:6px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            PDF Turma
+          </button>
+          <button id="btn-exportar-pdf-completo" class="btn btn-sm" onclick="exportarRelatorioCompleto()" style="background:var(--accent);color:#fff;gap:6px;border:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Exportar Relatório Completo
+          </button>
         </div>
       </div>
       <!-- RESUMO DA TURMA -->
@@ -1342,6 +1356,8 @@ async function loadNotasTurma(){
   </div>`;
   el.innerHTML=table;
   if(btnExp)btnExp.style.display='flex';
+  const btnPdfT=document.getElementById('btn-exportar-pdf-turma');
+  if(btnPdfT)btnPdfT.style.display='flex';
   // Armazena dados para exportação
   window._notasExportData={serie,turma,bimNotas,alunos,notasMap,COLUNAS};
 }
@@ -3318,6 +3334,261 @@ function exportarNotasExcel(){
   const nomeArquivo=`Notas_${serie.replace('º Ano','')}_${turma}_${bimNotas}Bim.xlsx`;
   XLSX.writeFile(wb,nomeArquivo);
   toast('Excel gerado! ✓','success');
+}
+
+
+// ─── PDF: Turma atual ───────────────────────────────────────────────────────
+async function exportarPDFTurma(){
+  const d=window._notasExportData;
+  if(!d){toast('Carregue o boletim primeiro','error');return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  gerarSecaoPDF(doc,d,0);
+  const bim=d.bimNotas;
+  const nome=`Boletim_${d.serie.replace('º Ano','')}_${d.turma}_${bim}Bim.pdf`;
+  doc.save(nome);
+  toast('PDF gerado! ✓','success');
+}
+
+// ─── PDF: Relatório completo (todas as séries e turmas) ─────────────────────
+async function exportarRelatorioCompleto(){
+  const {jsPDF}=window.jspdf;
+  if(!jsPDF){toast('Biblioteca PDF não carregada','error');return;}
+
+  const bimEl=document.getElementById('f-bim-notas');
+  const bimNotas=bimEl?parseInt(bimEl.value||'1'):1;
+
+  const SERIES=['6º Ano','7º Ano','8º Ano','9º Ano'];
+  const TURMAS=['A','B','C','D','E','F','G','H'];
+  const COLUNAS_DEF=[
+    {prop:'P1',ver:1,label:'P1·1ª'},{prop:'P1',ver:2,label:'P1·2ª'},
+    {prop:'P2',ver:1,label:'P2·1ª'},{prop:'P2',ver:2,label:'P2·2ª'},
+    {prop:'P3',ver:1,label:'P3·1ª'},{prop:'P3',ver:2,label:'P3·2ª'},
+  ];
+
+  toast('Gerando relatório completo...','');
+
+  // Modal de progresso
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`<div style="background:#fff;border-radius:16px;padding:36px 44px;text-align:center;min-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="font-family:Inter,sans-serif;font-size:18px;font-weight:700;color:#1A1714;margin-bottom:8px">Gerando Relatório PDF</div>
+    <div id="pdf-progress-label" style="font-size:14px;color:#6B6560;margin-bottom:20px">Iniciando...</div>
+    <div style="height:6px;background:#F0EDE8;border-radius:3px;overflow:hidden">
+      <div id="pdf-progress-bar" style="height:100%;background:#D4541E;border-radius:3px;transition:width .3s;width:0%"></div>
+    </div>
+    <div id="pdf-progress-pct" style="font-size:12px;color:#A09A94;margin-top:8px">0%</div>
+  </div>`;
+  document.body.appendChild(overlay);
+
+  const setProgress=(pct,label)=>{
+    const bar=document.getElementById('pdf-progress-bar');
+    const lbl=document.getElementById('pdf-progress-label');
+    const pctEl=document.getElementById('pdf-progress-pct');
+    if(bar)bar.style.width=pct+'%';
+    if(lbl)lbl.textContent=label;
+    if(pctEl)pctEl.textContent=Math.round(pct)+'%';
+  };
+
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  let primeiraSecao=true;
+  let totalSeries=SERIES.length*TURMAS.length;
+  let count=0;
+
+  for(const serie of SERIES){
+    for(const turma of TURMAS){
+      count++;
+      const pct=(count/totalSeries)*90;
+      setProgress(pct,`Carregando ${serie} – Turma ${turma}...`);
+      await new Promise(r=>setTimeout(r,0)); // yield para UI atualizar
+
+      // Busca alunos da turma
+      const {data:alunos}=await db.from('alunos').select('id,nome,numero,turma')
+        .ilike('ano',`%${serie.replace('º Ano','')}%`)
+        .or(`turma.eq.${turma},turma.ilike.%${turma}`)
+        .order('numero',{ascending:true});
+
+      if(!alunos||!alunos.length)continue;
+
+      const ids=alunos.map(a=>a.id);
+      let hist=[], pacNotas=[];
+      const BATCH=100;
+      for(let i=0;i<ids.length;i+=BATCH){
+        const batch=ids.slice(i,i+BATCH);
+        const {data:h}=await db.from('notas_historicas').select('aluno_id,proposta,versao,nota')
+          .in('aluno_id',batch).eq('bimestre',bimNotas);
+        if(h)hist.push(...h);
+        const {data:pn}=await db.from('notas_redacao')
+          .select('aluno_id,nota,situacao,proposta,versao,pacote_id,pacotes!inner(proposta,versao,tipo)')
+          .in('aluno_id',batch).not('aluno_id','is',null);
+        if(pn)pacNotas.push(...pn);
+      }
+
+      const notasMap={};
+      alunos.forEach(a=>{notasMap[a.id]={};COLUNAS_DEF.forEach(c=>{notasMap[a.id][c.prop+'·'+String(c.ver)]=null;});});
+      hist.forEach(n=>{const k=n.proposta+'·'+String(n.versao);if(notasMap[n.aluno_id]&&k in notasMap[n.aluno_id])notasMap[n.aluno_id][k]=n.nota!==null?parseFloat(n.nota):null;});
+      pacNotas.forEach(n=>{
+        if(!n.aluno_id||n.nota===null)return;
+        const prop=n.proposta||(n.pacotes&&n.pacotes.proposta)||null;
+        const ver=n.versao||(n.pacotes&&n.pacotes.versao)||null;
+        if(!prop||!ver)return;
+        const k=prop+'·'+String(ver);
+        if(notasMap[n.aluno_id]&&k in notasMap[n.aluno_id])
+          notasMap[n.aluno_id][k]=parseFloat(n.nota);
+      });
+
+      const secaoData={serie,turma,bimNotas,alunos,notasMap,COLUNAS:COLUNAS_DEF};
+      if(!primeiraSecao)doc.addPage();
+      gerarSecaoPDF(doc,secaoData,doc.internal.getNumberOfPages()-1);
+      primeiraSecao=false;
+    }
+  }
+
+  setProgress(98,'Finalizando PDF...');
+  await new Promise(r=>setTimeout(r,100));
+
+  const dataHoje=new Date().toLocaleDateString('pt-BR');
+  const nomeArq=`Relatorio_Completo_${bimNotas}Bim_${dataHoje.replace(/\//g,'-')}.pdf`;
+  doc.save(nomeArq);
+
+  document.body.removeChild(overlay);
+  toast('Relatório completo gerado! ✓','success');
+}
+
+// ─── Gera uma seção (turma) no doc PDF ──────────────────────────────────────
+function gerarSecaoPDF(doc, d, pageIndex){
+  const {jsPDF}=window.jspdf;
+  const {serie,turma,bimNotas,alunos,notasMap,COLUNAS}=d;
+  const pageW=doc.internal.pageSize.getWidth();
+  const pageH=doc.internal.pageSize.getHeight();
+  const margem=12;
+  let y=margem;
+
+  // ── Cabeçalho ──
+  doc.setFillColor(26,23,20); // #1A1714
+  doc.roundedRect(margem,y,pageW-margem*2,22,3,3,'F');
+
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(13);
+  doc.setFont('helvetica','bold');
+  doc.text('Colégio Arena — Relatório de Redações',margem+6,y+8);
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(200,190,180);
+  doc.text(`${serie}  •  Turma ${turma}  •  ${bimNotas}º Bimestre`,margem+6,y+16);
+
+  const dataHoje=new Date().toLocaleDateString('pt-BR');
+  doc.text(`Emitido em ${dataHoje}`,pageW-margem-6,y+16,{align:'right'});
+
+  y+=26;
+
+  // ── Estatísticas ──
+  let totalN=0,somaT=0,ac7=0,ab5=0;
+  alunos.forEach(a=>{COLUNAS.forEach(c=>{let n=notasMap[a.id][c.prop+'·'+c.ver];if(n!==null&&n!==undefined){n=parseFloat(n);if(!isNaN(n)){totalN++;somaT+=n;if(n>=7)ac7++;if(n<5)ab5++;}}});});
+  const mediaG=totalN>0?(somaT/totalN):null;
+
+  const stats=[
+    {label:'Alunos',valor:String(alunos.length),cor:[27,79,138]},
+    {label:'Notas lançadas',valor:String(totalN),cor:[45,106,79]},
+    {label:'Média Geral',valor:mediaG!==null?mediaG.toFixed(2).replace('.',','):'—',cor:[212,84,30]},
+    {label:'Acima de 7,0',valor:String(ac7),cor:[45,106,79]},
+    {label:'Abaixo de 5,0',valor:String(ab5),cor:[192,57,43]},
+  ];
+
+  const cardW=(pageW-margem*2-8*4)/5;
+  stats.forEach((s,i)=>{
+    const cx=margem+i*(cardW+8);
+    doc.setFillColor(248,245,241);
+    doc.roundedRect(cx,y,cardW,16,2,2,'F');
+    doc.setFontSize(7);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(100,95,90);
+    doc.text(s.label.toUpperCase(),cx+cardW/2,y+5,{align:'center'});
+    doc.setFontSize(12);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...s.cor);
+    doc.text(s.valor,cx+cardW/2,y+12,{align:'center'});
+  });
+
+  y+=22;
+
+  // ── Tabela ──
+  const cabecalho=['#','Nome',...COLUNAS.map(c=>c.label),'Média'];
+
+  const linhas=alunos.map(a=>{
+    const notas=COLUNAS.map(c=>{
+      const n=notasMap[a.id][c.prop+'·'+String(c.ver)];
+      return n!==null&&n!==undefined?parseFloat(n).toFixed(1).replace('.',','):'—';
+    });
+    const vals=COLUNAS.map(c=>notasMap[a.id][c.prop+'·'+String(c.ver)]).filter(n=>n!==null&&n!==undefined).map(n=>parseFloat(n)).filter(n=>!isNaN(n));
+    const media=vals.length>0?(vals.reduce((s,n)=>s+n,0)/6).toFixed(2).replace('.',','):'—';
+    return [String(a.numero||''),a.nome,...notas,media];
+  });
+
+  // Linha de média da turma
+  const mediaCols=COLUNAS.map(c=>{
+    const vals=alunos.map(a=>notasMap[a.id][c.prop+'·'+String(c.ver)]).filter(n=>n!==null&&n!==undefined).map(n=>parseFloat(n)).filter(n=>!isNaN(n));
+    return vals.length>0?(vals.reduce((s,n)=>s+n,0)/vals.length).toFixed(1).replace('.',','):'—';
+  });
+  const mediaGeralLin=mediaG!==null?mediaG.toFixed(2).replace('.',','):'—';
+  linhas.push(['','Média da Turma',...mediaCols,mediaGeralLin]);
+
+  function corCelula(val){
+    if(!val||val==='—')return null;
+    const n=parseFloat(val.replace(',','.'));
+    if(isNaN(n))return null;
+    if(n>=7)return{r:234,g:244,b:238}; // verde claro
+    if(n>=5)return{r:253,g:245,b:224}; // amarelo claro
+    return{r:253,g:236,b:234}; // vermelho claro
+  }
+  function corTexto(val){
+    if(!val||val==='—')return[100,95,90];
+    const n=parseFloat(val.replace(',','.'));
+    if(isNaN(n))return[100,95,90];
+    if(n>=7)return[45,106,79];
+    if(n>=5)return[181,134,13];
+    return[192,57,43];
+  }
+
+  doc.autoTable({
+    startY:y,
+    head:[cabecalho],
+    body:linhas,
+    margin:{left:margem,right:margem},
+    styles:{font:'helvetica',fontSize:8,cellPadding:2.5,valign:'middle'},
+    headStyles:{fillColor:[26,23,20],textColor:[255,255,255],fontStyle:'bold',fontSize:8,halign:'center'},
+    columnStyles:{
+      0:{halign:'center',cellWidth:10},
+      1:{halign:'left',cellWidth:50,fontStyle:'bold'},
+      ...Object.fromEntries(COLUNAS.map((_,i)=>([i+2,{halign:'center',cellWidth:20}]))),
+      [COLUNAS.length+2]:{halign:'center',cellWidth:22,fontStyle:'bold',fillColor:[253,241,236]},
+    },
+    didParseCell:(data)=>{
+      if(data.section==='body'&&data.column.index>=2){
+        const val=data.cell.raw;
+        const cor=corCelula(val);
+        if(cor){data.cell.styles.fillColor=[cor.r,cor.g,cor.b];}
+        data.cell.styles.textColor=corTexto(val);
+        data.cell.styles.fontStyle='bold';
+      }
+      // Linha de média da turma
+      if(data.section==='body'&&data.row.index===linhas.length-1){
+        data.cell.styles.fillColor=[240,237,232];
+        data.cell.styles.fontStyle='bold';
+        if(data.column.index===1)data.cell.styles.textColor=[100,95,90];
+      }
+    },
+    didDrawPage:(data)=>{
+      // Rodapé
+      const pageNum=doc.internal.getNumberOfPages();
+      doc.setFontSize(7);
+      doc.setTextColor(160,154,148);
+      doc.setFont('helvetica','normal');
+      doc.text(`${serie} – Turma ${turma} – ${bimNotas}º Bimestre`,margem,pageH-5);
+      doc.text(`Página ${data.pageNumber}`,pageW-margem,pageH-5,{align:'right'});
+    },
+  });
 }
 
 function toggleSidebar(forceClose){
