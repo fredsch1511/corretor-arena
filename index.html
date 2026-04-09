@@ -485,6 +485,10 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             PDF Turma
           </button>
+          <button id="btn-exportar-pdf-serie" class="btn btn-sm" onclick="exportarPDFSerie()" style="display:none;background:var(--blue-bg);color:var(--blue);border:1.5px solid #B5D4F4;gap:6px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            PDF Série
+          </button>
           <button id="btn-exportar-pdf-completo" class="btn btn-sm" onclick="exportarRelatorioCompleto()" style="background:var(--accent);color:#fff;gap:6px;border:none">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             Exportar Relatório Completo
@@ -1239,10 +1243,16 @@ async function loadNotasTurma(){
   const statsEl=document.getElementById('notas-stats');
   const btnExp=document.getElementById('btn-exportar-notas');
 
+  const btnPdfSerie=document.getElementById('btn-exportar-pdf-serie');
+
   if(!serie||!turma){
     el.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Selecione série e turma</div></div>';
     if(resumoEl)resumoEl.style.display='none';
     if(btnExp)btnExp.style.display='none';
+    const btnPdfT2=document.getElementById('btn-exportar-pdf-turma');
+    if(btnPdfT2)btnPdfT2.style.display='none';
+    // Mostra botão de série se ao menos a série estiver selecionada
+    if(btnPdfSerie)btnPdfSerie.style.display=serie?'flex':'none';
     return;
   }
   el.innerHTML='<div class="loading"><div class="spinner"></div> Carregando boletim...</div>';
@@ -1358,6 +1368,7 @@ async function loadNotasTurma(){
   if(btnExp)btnExp.style.display='flex';
   const btnPdfT=document.getElementById('btn-exportar-pdf-turma');
   if(btnPdfT)btnPdfT.style.display='flex';
+  if(btnPdfSerie)btnPdfSerie.style.display='flex';
   // Armazena dados para exportação
   window._notasExportData={serie,turma,bimNotas,alunos,notasMap,COLUNAS};
 }
@@ -3348,6 +3359,102 @@ async function exportarPDFTurma(){
   const nome=`Boletim_${d.serie.replace('º Ano','')}_${d.turma}_${bim}Bim.pdf`;
   doc.save(nome);
   toast('PDF gerado! ✓','success');
+}
+
+// ─── PDF: Série completa (todas as turmas da série selecionada) ─────────────
+async function exportarPDFSerie(){
+  const {jsPDF}=window.jspdf;
+  if(!jsPDF){toast('Biblioteca PDF não carregada','error');return;}
+
+  const serie=document.getElementById('f-serie').value;
+  if(!serie){toast('Selecione uma série primeiro','error');return;}
+
+  const bimEl=document.getElementById('f-bim-notas');
+  const bimNotas=bimEl?parseInt(bimEl.value||'1'):1;
+  const TURMAS=['A','B','C','D','E','F','G','H'];
+  const COLUNAS_DEF=[
+    {prop:'P1',ver:1,label:'P1·1ª'},{prop:'P1',ver:2,label:'P1·2ª'},
+    {prop:'P2',ver:1,label:'P2·1ª'},{prop:'P2',ver:2,label:'P2·2ª'},
+    {prop:'P3',ver:1,label:'P3·1ª'},{prop:'P3',ver:2,label:'P3·2ª'},
+  ];
+
+  // Modal de progresso
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`<div style="background:#fff;border-radius:16px;padding:36px 44px;text-align:center;min-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.18)">
+    <div style="font-family:Inter,sans-serif;font-size:18px;font-weight:700;color:#1A1714;margin-bottom:4px">Gerando PDF</div>
+    <div style="font-family:Inter,sans-serif;font-size:14px;color:#D4541E;font-weight:600;margin-bottom:12px">${serie}</div>
+    <div id="pdf-serie-label" style="font-size:14px;color:#6B6560;margin-bottom:20px">Iniciando...</div>
+    <div style="height:6px;background:#F0EDE8;border-radius:3px;overflow:hidden">
+      <div id="pdf-serie-bar" style="height:100%;background:#1B4F8A;border-radius:3px;transition:width .3s;width:0%"></div>
+    </div>
+    <div id="pdf-serie-pct" style="font-size:12px;color:#A09A94;margin-top:8px">0%</div>
+  </div>`;
+  document.body.appendChild(overlay);
+
+  const setP=(pct,label)=>{
+    const b=document.getElementById('pdf-serie-bar');
+    const l=document.getElementById('pdf-serie-label');
+    const p=document.getElementById('pdf-serie-pct');
+    if(b)b.style.width=pct+'%';
+    if(l)l.textContent=label;
+    if(p)p.textContent=Math.round(pct)+'%';
+  };
+
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  let primeira=true;
+  let count=0;
+
+  for(const turma of TURMAS){
+    count++;
+    const pct=(count/TURMAS.length)*90;
+    setP(pct,`Carregando Turma ${turma}...`);
+    await new Promise(r=>setTimeout(r,0));
+
+    const {data:alunos}=await db.from('alunos').select('id,nome,numero,turma')
+      .eq('serie',serie)
+      .or(`turma.eq.${turma},turma.ilike.%${turma}`)
+      .order('numero',{ascending:true});
+
+    if(!alunos||!alunos.length)continue;
+
+    const ids=alunos.map(a=>a.id);
+    let hist=[],pacNotas=[];
+    for(let i=0;i<ids.length;i+=100){
+      const batch=ids.slice(i,i+100);
+      const {data:h}=await db.from('notas_historicas').select('aluno_id,proposta,versao,nota')
+        .in('aluno_id',batch).eq('bimestre',bimNotas);
+      if(h)hist.push(...h);
+      const {data:pn}=await db.from('notas_redacao')
+        .select('aluno_id,nota,situacao,proposta,versao,pacote_id,pacotes!inner(proposta,versao,tipo)')
+        .in('aluno_id',batch).not('aluno_id','is',null);
+      if(pn)pacNotas.push(...pn);
+    }
+
+    const notasMap={};
+    alunos.forEach(a=>{notasMap[a.id]={};COLUNAS_DEF.forEach(c=>{notasMap[a.id][c.prop+'·'+String(c.ver)]=null;});});
+    hist.forEach(n=>{const k=n.proposta+'·'+String(n.versao);if(notasMap[n.aluno_id]&&k in notasMap[n.aluno_id])notasMap[n.aluno_id][k]=n.nota!==null?parseFloat(n.nota):null;});
+    pacNotas.forEach(n=>{
+      if(!n.aluno_id||n.nota===null)return;
+      const prop=n.proposta||(n.pacotes&&n.pacotes.proposta)||null;
+      const ver=n.versao||(n.pacotes&&n.pacotes.versao)||null;
+      if(!prop||!ver)return;
+      const k=prop+'·'+String(ver);
+      if(notasMap[n.aluno_id]&&k in notasMap[n.aluno_id])notasMap[n.aluno_id][k]=parseFloat(n.nota);
+    });
+
+    if(!primeira)doc.addPage();
+    gerarSecaoPDF(doc,{serie,turma,bimNotas,alunos,notasMap,COLUNAS:COLUNAS_DEF},0);
+    primeira=false;
+  }
+
+  setP(98,'Finalizando...');
+  await new Promise(r=>setTimeout(r,100));
+
+  const dataHoje=new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+  doc.save(`Relatorio_${serie.replace('º Ano','')}_${bimNotas}Bim_${dataHoje}.pdf`);
+  document.body.removeChild(overlay);
+  toast(`PDF do ${serie} gerado! ✓`,'success');
 }
 
 // ─── PDF: Relatório completo (todas as séries e turmas) ─────────────────────
