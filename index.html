@@ -696,8 +696,58 @@ tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--surfac
 <div id="tab-corretores" style="display:none">
       <div class="section-header">
         <div style="font-family:"Inter",sans-serif;font-size:16px;font-weight:600">Corretores</div>
-        <button class="btn btn-primary btn-sm" onclick="openModalCorretor()">+ Novo Corretor</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="toggleRelatorioCorretores()" id="btn-toggle-relatorio" style="gap:6px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="8" width="3" height="7" rx="1"/><rect x="6.5" y="4" width="3" height="11" rx="1"/><rect x="12" y="1" width="3" height="14" rx="1"/></svg>
+            Relatório de Produção
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="openModalCorretor()">+ Novo Corretor</button>
+        </div>
       </div>
+
+      <!-- RELATÓRIO DE PRODUÇÃO (inicialmente oculto) -->
+      <div id="relatorio-producao" style="display:none;margin-bottom:28px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+          <div style="font-family:'Inter',sans-serif;font-size:15px;font-weight:700;color:var(--ink)">📊 Produção por Corretor</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="rel-filtro-bim" onchange="loadRelatorioProducao()" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;background:var(--surface);color:var(--ink);outline:none">
+              <option value="">Todos os bimestres</option>
+              <option value="1">1º Bimestre</option>
+              <option value="2">2º Bimestre</option>
+              <option value="3">3º Bimestre</option>
+              <option value="4">4º Bimestre</option>
+            </select>
+            <select id="rel-filtro-status" onchange="loadRelatorioProducao()" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;background:var(--surface);color:var(--ink);outline:none">
+              <option value="">Todos os pacotes</option>
+              <option value="concluido">Concluídos</option>
+              <option value="enviado">Enviados</option>
+              <option value="aberto">Em andamento</option>
+            </select>
+          </div>
+        </div>
+        <div id="rel-cards-corretores" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:20px">
+          <div class="loading"><div class="spinner"></div> Carregando...</div>
+        </div>
+        <!-- Tabela comparativa -->
+        <div id="rel-tabela-wrap" style="display:none">
+          <div style="font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Comparativo geral</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Corretor</th>
+                  <th style="text-align:center">Redações corrigidas</th>
+                  <th style="text-align:center">Pacotes</th>
+                  <th style="text-align:center">Em andamento</th>
+                  <th style="text-align:center">Valor total</th>
+                </tr>
+              </thead>
+              <tbody id="rel-tabela-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <div id="lista-corretores" class="table-wrap"><div class="loading"><div class="spinner"></div></div></div>
     </div>
     <div id="tab-alunos" style="display:none">
@@ -1152,7 +1202,7 @@ function showTab(id){
   const ptEl=document.getElementById('coord-page-title');
   if(ptEl)ptEl.textContent=titles[id]||'';
   if(id==='tab-notas')loadNotasTurma();
-  if(id==='tab-corretores')loadCorretores();
+  if(id==='tab-corretores'){loadCorretores();const rp=document.getElementById('relatorio-producao');if(rp&&rp.style.display!=='none')loadRelatorioProducao();}
   if(id==='tab-alunos')loadAlunosFiltro();
   if(id==='tab-prep')resetPrep();
   if(id==='tab-config')loadConfiguracoes();
@@ -1445,6 +1495,171 @@ async function filtrarTurmaAlunos(serie,turma){
   });
   h+='</div>';
   el.innerHTML=h;
+}
+
+// RELATÓRIO DE PRODUÇÃO
+function toggleRelatorioCorretores(){
+  const el=document.getElementById('relatorio-producao');
+  const btn=document.getElementById('btn-toggle-relatorio');
+  const visible=el.style.display!=='none';
+  el.style.display=visible?'none':'block';
+  btn.style.background=visible?'transparent':'var(--accent-bg)';
+  btn.style.color=visible?'var(--ink2)':'var(--accent)';
+  btn.style.borderColor=visible?'var(--border)':'var(--accent)';
+  if(!visible)loadRelatorioProducao();
+}
+
+async function loadRelatorioProducao(){
+  const cardsEl=document.getElementById('rel-cards-corretores');
+  const tabelaEl=document.getElementById('rel-tabela-wrap');
+  const tabelaBody=document.getElementById('rel-tabela-body');
+  const filtroBim=document.getElementById('rel-filtro-bim')?.value||'';
+  const filtroStatus=document.getElementById('rel-filtro-status')?.value||'';
+
+  cardsEl.innerHTML='<div class="loading"><div class="spinner"></div> Carregando...</div>';
+  if(tabelaEl)tabelaEl.style.display='none';
+
+  // Busca corretores
+  const {data:corretores}=await db.from('usuarios').select('id,nome').eq('role','corretor').order('nome');
+  if(!corretores||!corretores.length){
+    cardsEl.innerHTML='<div style="font-size:14px;color:var(--ink3);padding:16px">Nenhum corretor cadastrado.</div>';
+    return;
+  }
+
+  // Busca todos pacotes (com filtros opcionais)
+  let qPac=db.from('pacotes').select('id,nome,status,corretor_id,valor_por_redacao,bimestre,created_at');
+  if(filtroBim)qPac=qPac.eq('bimestre',parseInt(filtroBim));
+  if(filtroStatus)qPac=qPac.eq('status',filtroStatus);
+  const {data:pacotes}=await qPac;
+  if(!pacotes?.length){
+    cardsEl.innerHTML='<div style="font-size:14px;color:var(--ink3);padding:16px">Nenhum pacote encontrado com esses filtros.</div>';
+    return;
+  }
+
+  // Busca notas de todos esses pacotes em lotes
+  const pacIds=pacotes.map(p=>p.id);
+  let todasNotas=[];
+  for(let i=0;i<pacIds.length;i+=20){
+    const batch=pacIds.slice(i,i+20);
+    const {data:ns}=await db.from('notas_redacao').select('id,nota,situacao,pacote_id').in('pacote_id',batch);
+    if(ns)todasNotas.push(...ns);
+  }
+
+  // Agrupa notas por pacote
+  const notasPorPacote={};
+  todasNotas.forEach(n=>{
+    if(!notasPorPacote[n.pacote_id])notasPorPacote[n.pacote_id]=[];
+    notasPorPacote[n.pacote_id].push(n);
+  });
+
+  // Monta dados por corretor
+  const dadosCorretores=corretores.map(cor=>{
+    const meusPacotes=(pacotes||[]).filter(p=>p.corretor_id===cor.id);
+    let totalCorrigidas=0,totalRedacoes=0,valorAcumulado=0;
+    const pacotesInfo=meusPacotes.map(p=>{
+      const ns=notasPorPacote[p.id]||[];
+      const total=ns.length;
+      const corrigidas=ns.filter(n=>(n.nota!==null)||n.situacao==='zerada').length;
+      totalCorrigidas+=corrigidas;
+      totalRedacoes+=total;
+      valorAcumulado+=corrigidas*(p.valor_por_redacao||5);
+      return{...p,total,corrigidas};
+    });
+    const pacConcluidos=pacotesInfo.filter(p=>p.status==='concluido').length;
+    const pacEmAndamento=pacotesInfo.filter(p=>p.status==='aberto').length;
+    const pacEnviados=pacotesInfo.filter(p=>p.status==='enviado').length;
+    return{cor,meusPacotes:pacotesInfo,totalCorrigidas,totalRedacoes,valorAcumulado,pacConcluidos,pacEmAndamento,pacEnviados};
+  });
+
+  // Máximo para barra de progresso
+  const maxCorrigidas=Math.max(...dadosCorretores.map(d=>d.totalCorrigidas),1);
+
+  // Render cards
+  cardsEl.innerHTML=dadosCorretores.map(d=>{
+    const pct=Math.round((d.totalCorrigidas/maxCorrigidas)*100);
+    const initials=d.cor.nome.split(' ').map(n=>n[0]).slice(0,2).join('');
+    return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#B8431A);display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;color:#fff;flex-shrink:0">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Inter',sans-serif;font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.cor.nome}</div>
+          <div style="font-size:12px;color:var(--ink3)">${d.meusPacotes.length} pacote(s)</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'Inter',sans-serif;font-weight:800;font-size:28px;color:var(--accent);line-height:1">${d.totalCorrigidas}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px">corrigidas</div>
+        </div>
+      </div>
+      <!-- Barra de progresso -->
+      <div style="background:var(--surface2);border-radius:99px;height:6px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:99px;transition:width .4s ease"></div>
+      </div>
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="text-align:center;padding:8px;background:var(--accent-bg);border-radius:var(--radius-sm)">
+          <div style="font-family:'Inter',sans-serif;font-weight:700;font-size:16px;color:var(--accent)">${d.totalRedacoes}</div>
+          <div style="font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.3px;margin-top:2px">Total</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--green-bg);border-radius:var(--radius-sm)">
+          <div style="font-family:'Inter',sans-serif;font-weight:700;font-size:16px;color:var(--green)">${d.pacConcluidos}</div>
+          <div style="font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:.3px;margin-top:2px">Concluídos</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--yellow-bg);border-radius:var(--radius-sm)">
+          <div style="font-family:'Inter',sans-serif;font-weight:700;font-size:16px;color:var(--yellow)">${d.pacEmAndamento}</div>
+          <div style="font-size:10px;color:var(--yellow);text-transform:uppercase;letter-spacing:.3px;margin-top:2px">Andamento</div>
+        </div>
+      </div>
+      <!-- Valor -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm)">
+        <span style="font-size:13px;color:var(--ink2)">Valor acumulado</span>
+        <span style="font-family:'Inter',sans-serif;font-weight:700;font-size:16px;color:var(--green)">R$ ${d.valorAcumulado.toFixed(2).replace('.',',')}</span>
+      </div>
+      ${d.meusPacotes.length>0?`
+      <!-- Lista de pacotes colapsável -->
+      <details style="margin-top:-4px">
+        <summary style="font-size:12px;font-weight:600;color:var(--ink2);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;gap:6px">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="flex-shrink:0"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Ver ${d.meusPacotes.length} pacote(s)
+        </summary>
+        <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto">
+          ${d.meusPacotes.map(p=>{
+            const pctP=p.total>0?Math.round((p.corrigidas/p.total)*100):0;
+            const statusC=p.status==='concluido'?'var(--green)':p.status==='enviado'?'var(--blue)':'var(--yellow)';
+            const statusT=p.status==='concluido'?'Concluído':p.status==='enviado'?'Enviado':'Andamento';
+            return`<div style="padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+                <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;color:var(--ink)">${p.nome}</span>
+                <span style="font-size:11px;font-weight:600;color:${statusC};white-space:nowrap">${statusT}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;background:var(--border);border-radius:99px;height:4px;overflow:hidden">
+                  <div style="width:${pctP}%;height:100%;background:var(--accent);border-radius:99px"></div>
+                </div>
+                <span style="font-size:11px;color:var(--ink2);white-space:nowrap">${p.corrigidas}/${p.total}</span>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </details>`:''}
+    </div>`;
+  }).join('');
+
+  // Tabela comparativa
+  if(tabelaEl&&tabelaBody){
+    tabelaBody.innerHTML=dadosCorretores.map(d=>`<tr>
+      <td><strong>${d.cor.nome}</strong></td>
+      <td style="text-align:center">
+        <span style="font-family:'Inter',sans-serif;font-weight:700;color:var(--accent)">${d.totalCorrigidas}</span>
+        <span style="font-size:12px;color:var(--ink3)"> / ${d.totalRedacoes}</span>
+      </td>
+      <td style="text-align:center">${d.meusPacotes.length}</td>
+      <td style="text-align:center">
+        <span style="${d.pacEmAndamento>0?'color:var(--yellow);font-weight:600':'color:var(--ink3)'}">${d.pacEmAndamento}</span>
+      </td>
+      <td style="text-align:center;font-family:'Inter',sans-serif;font-weight:600;color:var(--green)">R$ ${d.valorAcumulado.toFixed(2).replace('.',',')}</td>
+    </tr>`).join('');
+    tabelaEl.style.display='block';
+  }
 }
 
 // CORRETORES
